@@ -37,12 +37,19 @@
 #define LOG			"log.txt"
 #define X_LENGTH	1000
 #define Y_LENGTH	1000
+
+//for colored picture
 #define REDBAND		4
 #define GREENBAND	3
 #define BLUEBAND	2
 
+#define INFRAREDBAND 14
+#define ULTRAVIOLETBAND 0
+
 #define DEPTH 		20
-#define THRESHOLD_UNSTABLE 350	//430
+#define INFRARED_THRESHOLD 430
+#define ULTRAVIOLET_THRESHOLD 10000
+#define HIGHT_CLOUD_THRESHOLD 470	//430
 #define THRESHOLD_STABLE 1000
 
 
@@ -266,9 +273,10 @@ int main(int argc, char *argv[])
 					}
 					tempimage.write(temppicname);
 				}
-
-				if (strcmp(sdsname, "EV_Band26") == 0)
-				{
+			}
+			else
+			if (strcmp(sdsname, "EV_Band26") == 0)
+			{
 
 					height = dimsizes[rank[0] - 2];
 					width = dimsizes[rank[0] -1];
@@ -276,7 +284,7 @@ int main(int argc, char *argv[])
 					specialpic = (unsigned short **)malloc(height*sizeof(unsigned short *));
 					for (i = 0; i < height; i++)
 					{
-						pic[i] = (unsigned short *)malloc(width*sizeof(unsigned short));
+						specialpic[i] = (unsigned short *)malloc(width*sizeof(unsigned short));
 					}
 
 					readarray(sds_id, specialpic, rank, dimsizes, datatype, numattr, log, 0);
@@ -300,27 +308,50 @@ int main(int argc, char *argv[])
 
 
 					colorimage.resize(width, height);
-
-					sprintf(colorpicname, "./img/%s:clouds.png", sdsname);
+					bool clouddetected = false;
+					sprintf(colorpicname, "./img/combo:clouds.png");
+					log << "\n begin detecting...";
+					log << endl;
+					log.flush();
 					for (i = 0; i < height; i ++)
 						for (j = 0; j < width; j++)
 						{
-							if (specialpic[i][j] < THRESHOLD_UNSTABLE)
-							{
-								colorimage[i][j] = png::rgb_pixel((colorpic[REDBAND][i][j]*255)/32768,(colorpic[GREENBAND][i][j]*255)/32768,(colorpic[BLUEBAND][i][j]*255)/32768);
-							}
-							else
-								if (specialpic[i][j] < THRESHOLD_STABLE)
+
+							clouddetected = false;
+								if (colorpic[INFRAREDBAND][i][j] > INFRARED_THRESHOLD)
 								{
-									colorimage[i][j] = png::rgb_pixel(0,0, int((pic[i][j]*pic[i][j]/(65535.0*65535.0))*255.0));
+									clouddetected = true;
+									colorimage[i][j] = png::rgb_pixel(255,50,50);
 								}
-								else
+
+								if (colorpic[ULTRAVIOLETBAND][i][j] > ULTRAVIOLET_THRESHOLD)
 								{
-									colorimage[i][j] = png::rgb_pixel(0,255,0);
+									clouddetected = true;
+									colorimage[i][j] = png::rgb_pixel(50, 0, 150);
+								}
+
+								if (specialpic[i][j] > HIGHT_CLOUD_THRESHOLD)
+								{
+									clouddetected = true;
+									colorimage[i][j] = png::rgb_pixel(100,100,255);
+								}
+
+								if (!clouddetected)
+								{
+									colorimage[i][j] = png::rgb_pixel((colorpic[REDBAND][i][j]*255)/32768,(colorpic[GREENBAND][i][j]*255)/32768,(colorpic[BLUEBAND][i][j]*255)/32768);
 								}
 						}
+					log<<" done";
+					log.flush();
 					colorimage.write(colorpicname);
 				}
+				sprintf(colorpicname, "./img/%s:color.png", MODIS_TYPE1);
+				for (i = 0; i < height; i ++)
+					for (j = 0; j < width; j++)
+					{
+							colorimage[i][j] = png::rgb_pixel((colorpic[REDBAND][i][j]*255)/32768,(colorpic[GREENBAND][i][j]*255)/32768,(colorpic[BLUEBAND][i][j]*255)/32768);
+					}
+				colorimage.write(colorpicname);
 
 
 				/*
@@ -341,7 +372,7 @@ int main(int argc, char *argv[])
 							colorimage.write(colorpicname);
 						}
 						*/
-			}
+
 		}
 		sds_index++;
 	}
