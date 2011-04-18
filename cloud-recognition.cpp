@@ -28,9 +28,9 @@
 #define MODIS_DIR "modisdata/"
 
 #define MODIS_TYPE1	"MOD021KM"
-#define MODIS_TYPEQ	"MOD021Q"
+#define MODIS_TYPEQ	"MOD02QKM"
 
-#define MODIS_NAME	".A2010213.0845.005.2010213163715"
+#define MODIS_NAME	".A2005152.0750.005.2010153063845"
 #define MODIS_EXT	".hdf"
 
 #define TEMP_PATH	"tmp/"
@@ -48,11 +48,12 @@
 
 #define DEPTH 		20
 #define INFRARED_THRESHOLD 430
-#define ULTRAVIOLET_THRESHOLD 10000
-#define HIGHT_CLOUD_THRESHOLD 470	//430
+#define ULTRAVIOLET_THRESHOLD 8000
+#define HIGHT_CLOUD_THRESHOLD 500	//430
 #define THRESHOLD_STABLE 1000
 
-
+#define THRESHOLD250LOW 0.75
+#define THRESHOLD250HIGH 1.1
 
 using namespace std;
 
@@ -153,8 +154,8 @@ int main(int argc, char *argv[])
 	intn status;
 	int height, width, depth;
 	float data[Y_LENGTH][X_LENGTH];
-	//unsigned short pic[Y_LENGTH][X_LENGTH];
-	unsigned short **pic; //full picture
+
+
 	unsigned short ***colorpic;
 	unsigned short **specialpic;
 
@@ -177,8 +178,7 @@ int main(int argc, char *argv[])
 	log.open(LOG);
 
 	sprintf(temppicname, "./png");
-	png::image<png::rgb_pixel> tempimage(1,1);
-	png::image<png::rgb_pixel> colorimage(1,1);
+	png::image<png::rgb_pixel> image(1,1);
 	status = 0;
 	sds_index = 0;
 
@@ -205,20 +205,16 @@ int main(int argc, char *argv[])
 				height = dimsizes[rank[0] - 2];
 				width = dimsizes[rank[0] -1];
 				colorpic = (unsigned short ***)malloc(sizeof(unsigned short **)*15);
-				log << "allocating colorimage array " << width << "x" << height << "... ";
+				log << "allocating image array " << width << "x" << height << "... ";
 				log.flush();
-				colorimage.resize(width, height);
+				image.resize(width, height);
 				log << "done\n";
 				log.flush();
+
+
 				for (depth = 0; depth < 15; depth++)
 				{
-					log << "allocating pic array " << width << "x" << height << "... ";
-					log.flush();
-					pic = (unsigned short **)malloc(height*sizeof(unsigned short *));
-					for (i = 0; i < height; i++)
-					{
-						pic[i] = (unsigned short *)malloc(width*sizeof(unsigned short));
-					}
+
 					colorpic[depth] = (unsigned short **)malloc(height*sizeof(unsigned short *));
 					for (i = 0; i < height; i++)
 					{
@@ -230,16 +226,12 @@ int main(int argc, char *argv[])
 					log << "reading data array... ";
 					log.flush();
 
-					readarray(sds_id, pic, rank, dimsizes, datatype, numattr, log, depth);
+
 					readarray(sds_id, colorpic[depth], rank, dimsizes, datatype, numattr, log, depth);
 					log << "done\n";
 					log.flush();
 
-					log << "allocating image array " << width << "x" << height << "... ";
-					log.flush();
-					tempimage.resize(width, height);
-					log << "done\n";
-					log.flush();
+
 					sprintf(temppath, "./img/%s", TEMP_PATH);
 					if (!exists(temppath))
 					{
@@ -251,27 +243,11 @@ int main(int argc, char *argv[])
 					{
 						for (j = 0 ; j < width; j++)
 						{
-							tempimage[i][j] = png::rgb_pixel((pic[i][j]*255)/32768,(pic[i][j]*255)/32768,(pic[i][j]*255)/32768 );
-
-		/*
-							if (pic[i][j] < THRESHOLD_UNSTABLE)
-							{
-								image[i][j] = png::rgb_pixel(255,0,0);
-							}
-							else
-							if (pic[i][j] < THRESHOLD_STABLE)
-							{
-								image[i][j] = png::rgb_pixel(0,0, int((pic[i][j]*pic[i][j]/(65535.0*65535.0))*255.0));
-							}
-							else
-							{
-								image[i][j] = png::rgb_pixel(0,255,0);
-							}
-		*/
+							image[i][j] = png::rgb_pixel((colorpic[depth][i][j]*255)/32768,(colorpic[depth][i][j]*255)/32768,(colorpic[depth][i][j]*255)/32768 );
 						}
 
 					}
-					tempimage.write(temppicname);
+					image.write(temppicname);
 				}
 			}
 			else
@@ -280,7 +256,7 @@ int main(int argc, char *argv[])
 
 					height = dimsizes[rank[0] - 2];
 					width = dimsizes[rank[0] -1];
-					colorimage.resize(width, height);
+					image.resize(width, height);
 					specialpic = (unsigned short **)malloc(height*sizeof(unsigned short *));
 					for (i = 0; i < height; i++)
 					{
@@ -289,7 +265,7 @@ int main(int argc, char *argv[])
 
 					readarray(sds_id, specialpic, rank, dimsizes, datatype, numattr, log, 0);
 
-					tempimage.resize(width, height);
+					image.resize(width, height);
 					sprintf(temppath, "./img/%s", TEMP_PATH);
 					if (!exists(temppath))
 					{
@@ -300,14 +276,13 @@ int main(int argc, char *argv[])
 					{
 						for (j = 0 ; j < width; j++)
 						{
-							tempimage[i][j] = png::rgb_pixel((specialpic[i][j]*255)/32768,(specialpic[i][j]*255)/32768,(specialpic[i][j]*255)/32768 );
+							image[i][j] = png::rgb_pixel((specialpic[i][j]*255)/32768,(specialpic[i][j]*255)/32768,(specialpic[i][j]*255)/32768 );
 						}
 
 					}
-					tempimage.write(temppicname);
+					image.write(temppicname);
 
 
-					colorimage.resize(width, height);
 					bool clouddetected = false;
 					sprintf(colorpicname, "./img/combo:clouds.png");
 					log << "\n begin detecting...";
@@ -321,61 +296,129 @@ int main(int argc, char *argv[])
 								if (colorpic[INFRAREDBAND][i][j] > INFRARED_THRESHOLD)
 								{
 									clouddetected = true;
-									colorimage[i][j] = png::rgb_pixel(255,50,50);
+									image[i][j] = png::rgb_pixel(255,50,50);
 								}
 
 								if (colorpic[ULTRAVIOLETBAND][i][j] > ULTRAVIOLET_THRESHOLD)
 								{
 									clouddetected = true;
-									colorimage[i][j] = png::rgb_pixel(50, 0, 150);
+									image[i][j] = png::rgb_pixel(50, 0, 150);
 								}
 
 								if (specialpic[i][j] > HIGHT_CLOUD_THRESHOLD)
 								{
 									clouddetected = true;
-									colorimage[i][j] = png::rgb_pixel(100,100,255);
+									image[i][j] = png::rgb_pixel(100,100,255);
 								}
 
 								if (!clouddetected)
 								{
-									colorimage[i][j] = png::rgb_pixel((colorpic[REDBAND][i][j]*255)/32768,(colorpic[GREENBAND][i][j]*255)/32768,(colorpic[BLUEBAND][i][j]*255)/32768);
+									image[i][j] = png::rgb_pixel((colorpic[REDBAND][i][j]*255)/32768,(colorpic[GREENBAND][i][j]*255)/32768,(colorpic[BLUEBAND][i][j]*255)/32768);
 								}
 						}
 					log<<" done";
 					log.flush();
-					colorimage.write(colorpicname);
+					image.write(colorpicname);
 				}
 				sprintf(colorpicname, "./img/%s:color.png", MODIS_TYPE1);
 				for (i = 0; i < height; i ++)
 					for (j = 0; j < width; j++)
 					{
-							colorimage[i][j] = png::rgb_pixel((colorpic[REDBAND][i][j]*255)/32768,(colorpic[GREENBAND][i][j]*255)/32768,(colorpic[BLUEBAND][i][j]*255)/32768);
+							image[i][j] = png::rgb_pixel((colorpic[REDBAND][i][j]*255)/32768,(colorpic[GREENBAND][i][j]*255)/32768,(colorpic[BLUEBAND][i][j]*255)/32768);
 					}
-				colorimage.write(colorpicname);
-
-
-				/*
-				for (int rr = 14; rr < 15; rr++)
-					for (int gg = 0; gg < 15; gg++)
-						for (int bb = 0; bb < 15; bb++)
-						{
-
-							sprintf(colorpicname, "./img/colortest/%s:%d:%d:%d:color.png", sdsname, rr, gg, bb);
-							//color picture
-							for (i = 0; i < height; i++)
-							{
-								for (j = 0 ; j < width; j++)
-								{
-									colorimage[i][j] = png::rgb_pixel((colorpic[rr][i][j]*255)/32768,(colorpic[gg][i][j]*255)/32768,(colorpic[bb][i][j]*255)/32768 );
-								}
-							}
-							colorimage.write(colorpicname);
-						}
-						*/
+				image.write(colorpicname);
 
 		}
 		sds_index++;
 	}
+
+
+
+		status = 0;
+		sds_index = 0;
+
+		sprintf(modisfilepath, "%s%s%s%s", MODIS_DIR, MODIS_TYPEQ, MODIS_NAME, MODIS_EXT);
+		while (status == 0)
+		{
+			sd_id = SDstart (modisfilepath, DFACC_READ);
+			sds_id = SDselect (sd_id, sds_index);
+
+			status = SDgetinfo(sds_id, sdsname, rank, dimsizes, datatype, numattr);
+			if (status == 0)
+			{
+				for (i = 0; i < *rank; i++)
+				{
+					log << dimsizes[i] << ", ";
+				}
+				log << endl;
+				//SDattrinfo(sds_id,  )
+
+				if (strcmp(sdsname, "EV_250_RefSB") == 0)
+				{
+
+					height = dimsizes[rank[0] - 2];
+					width = dimsizes[rank[0] -1];
+					colorpic = (unsigned short ***)malloc(sizeof(unsigned short **)*15);
+					log << "allocating image array " << width << "x" << height << "... ";
+					log.flush();
+					image.resize(width, height);
+					log << "done\n";
+					log.flush();
+
+
+					for (depth = 0; depth < 2; depth++)
+					{
+
+						colorpic[depth] = (unsigned short **)malloc(height*sizeof(unsigned short *));
+						for (i = 0; i < height; i++)
+						{
+							colorpic[depth][i] = (unsigned short *)malloc(width*sizeof(unsigned short));
+						}
+
+						readarray(sds_id, colorpic[depth], rank, dimsizes, datatype, numattr, log, depth);
+
+
+						sprintf(temppath, "./img/%s", TEMP_PATH);
+						if (!exists(temppath))
+						{
+							mkdir(temppath, 0777);
+						}
+						sprintf(temppicname, "%s%s:%d:%d.png",temppath, sdsname, sds_index, depth);
+						//picture of one band
+						for (i = 0; i < height; i++)
+						{
+							for (j = 0 ; j < width; j++)
+							{
+								image[i][j] = png::rgb_pixel((colorpic[depth][i][j]*255)/32768,(colorpic[depth][i][j]*255)/32768,(colorpic[depth][i][j]*255)/32768 );
+							}
+
+						}
+						image.write(temppicname);
+					}
+				}
+
+
+
+			}
+			sds_index++;
+		}
+		sprintf(colorpicname, "./img/%s:color.png", MODIS_TYPEQ);
+		for (i = 0; i < height; i ++)
+			for (j = 0; j < width; j++)
+			{
+				image[i][j] = png::rgb_pixel((colorpic[1][i][j]*255)/32768,((colorpic[0][i][j]*255)+2*(colorpic[1][i][j]*255))/(32768*3),(2*(colorpic[0][i][j]*255)+(colorpic[1][i][j]*255))/(32768*3));
+			}
+		image.write(colorpicname);
+		sprintf(colorpicname, "./img/%s:cloud.png", MODIS_TYPEQ);
+		for (i = 0; i < height; i ++)
+			for (j = 0; j < width; j++)
+			{
+				if ((colorpic[1][i][j]/colorpic[0][i][j] < THRESHOLD250HIGH)&&(colorpic[1][i][j]/colorpic[0][i][j] > THRESHOLD250LOW))
+				{
+					image[i][j] = png::rgb_pixel(255, 0, 255);
+				}
+			}
+		image.write(colorpicname);
 
 	printf("done\n");
 	status = SDendaccess (sds_id);
