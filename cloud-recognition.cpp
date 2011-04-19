@@ -30,7 +30,7 @@
 #define MODIS_TYPE1	"MOD021KM"
 #define MODIS_TYPEQ	"MOD02QKM"
 
-#define MODIS_NAME	".A2005152.0750.005.2010153063845"
+#define MODIS_NAME	".A2010187.0140.005.2010187074029"
 #define MODIS_EXT	".hdf"
 
 #define TEMP_PATH	"tmp/"
@@ -50,12 +50,12 @@
 
 #define DEPTH 		20
 #define INFRARED_THRESHOLD 430
-#define ULTRAVIOLET_THRESHOLD 8000
-#define HIGHT_CLOUD_THRESHOLD 500	//430
+#define ULTRAVIOLET_THRESHOLD 60000
+#define HIGHT_CLOUD_THRESHOLD 390	//430
 #define THRESHOLD_STABLE 1000
 
-#define THRESHOLD250LOW 0.75
-#define THRESHOLD250HIGH 1.10
+#define THRESHOLD250LOW 0.85
+#define THRESHOLD250HIGH 1.05
 #define QKM	true
 
 using namespace std;
@@ -155,12 +155,13 @@ int main(int argc, char *argv[])
 {
 	int32 sd_id, sds_id, sds_index;
 	intn status;
-	int height, width, depth;
+	int height, width, depth, heightq, widthq;
 	float data[Y_LENGTH][X_LENGTH];
 
 
 	unsigned short ***colorpic;
 	unsigned short **specialpic;
+	unsigned short ***pic;
 
 	char modisfilepath[255] = "";
 
@@ -287,7 +288,7 @@ int main(int argc, char *argv[])
 
 
 					bool clouddetected = false;
-					sprintf(colorpicname, "./img/combo:clouds.png");
+					sprintf(colorpicname, "./img/test%s%s:clouds.png",MODIS_NAME, MODIS_TYPE1);
 					log << "\n begin detecting...";
 					log << endl;
 					log.flush();
@@ -316,14 +317,16 @@ int main(int argc, char *argv[])
 
 								if (!clouddetected)
 								{
-									image[i][j] = png::rgb_pixel((colorpic[REDBAND][i][j]*255)/32768,(colorpic[GREENBAND][i][j]*255)/32768,(colorpic[BLUEBAND][i][j]*255)/32768);
+									image[i][j] = png::rgb_pixel((colorpic[REDBAND][i][j]*255)/32768,
+																(colorpic[GREENBAND][i][j]*255)/32768,
+																(colorpic[BLUEBAND][i][j]*255)/32768);
 								}
 						}
 					log<<" done";
 					log.flush();
 					image.write(colorpicname);
 				}
-				sprintf(colorpicname, "./img/%s:color.png", MODIS_TYPE1);
+				sprintf(colorpicname, "./img/test%s%s:color.png",MODIS_NAME, MODIS_TYPE1);
 				for (i = 0; i < height; i ++)
 					for (j = 0; j < width; j++)
 					{
@@ -363,26 +366,28 @@ int main(int argc, char *argv[])
 				if (strcmp(sdsname, "EV_250_RefSB") == 0)
 				{
 
-					height = dimsizes[rank[0] - 2];
-					width = dimsizes[rank[0] -1];
-					colorpic = (unsigned short ***)malloc(sizeof(unsigned short **)*15);
-					log << "allocating image array " << width << "x" << height << "... ";
+					heightq = dimsizes[rank[0] - 2];
+					widthq = dimsizes[rank[0] -1];
+					pic = (unsigned short ***)malloc(sizeof(unsigned short **)*15);
+					log << "allocating image array " << widthq << "x" << heightq << "... ";
 					log.flush();
-					image.resize(width, height);
+					image.resize(widthq, heightq);
 					log << "done\n";
 					log.flush();
 
 
+					pic = (unsigned short ***)malloc(sizeof(unsigned short **)*2);
+
 					for (depth = 0; depth < 2; depth++)
 					{
 
-						colorpic[depth] = (unsigned short **)malloc(height*sizeof(unsigned short *));
-						for (i = 0; i < height; i++)
+						pic[depth] = (unsigned short **)malloc(heightq*sizeof(unsigned short *));
+						for (i = 0; i < heightq; i++)
 						{
-							colorpic[depth][i] = (unsigned short *)malloc(width*sizeof(unsigned short));
+							pic[depth][i] = (unsigned short *)malloc(widthq*sizeof(unsigned short));
 						}
 
-						readarray(sds_id, colorpic[depth], rank, dimsizes, datatype, numattr, log, depth);
+						readarray(sds_id, pic[depth], rank, dimsizes, datatype, numattr, log, depth);
 
 
 						sprintf(temppath, "./img/%s", TEMP_PATH);
@@ -392,13 +397,13 @@ int main(int argc, char *argv[])
 						}
 						sprintf(temppicname, "%s%s:%d:%d.png",temppath, sdsname, sds_index, depth);
 						//picture of one band
-						for (i = 0; i < height; i++)
+						for (i = 0; i < heightq; i++)
 						{
-							for (j = 0 ; j < width; j++)
+							for (j = 0 ; j < widthq; j++)
 							{
-								image[i][j] = png::rgb_pixel((colorpic[depth][i][j]*255)/32768,
-															(colorpic[depth][i][j]*255)/32768,
-															(colorpic[depth][i][j]*255)/32768 );
+								image[i][j] = png::rgb_pixel((pic[depth][i][j]*255)/32768,
+															(pic[depth][i][j]*255)/32768,
+															(pic[depth][i][j]*255)/32768 );
 							}
 
 						}
@@ -411,31 +416,49 @@ int main(int argc, char *argv[])
 			}
 			sds_index++;
 		}
-		sprintf(colorpicname, "./img/%s:color.png", MODIS_TYPEQ);
-		for (i = 0; i < height; i ++)
-			for (j = 0; j < width; j++)
+		sprintf(colorpicname, "./img/test%s%s:color.png", MODIS_NAME, MODIS_TYPEQ);
+		for (i = 0; i < heightq; i ++)
+			for (j = 0; j < widthq; j++)
 			{
-				image[i][j] = png::rgb_pixel((colorpic[1][i][j]*255)/32768,
-											((colorpic[0][i][j]*255)+3*(colorpic[1][i][j]*255))/(32768*4),
-											((colorpic[0][i][j]*255)+(colorpic[1][i][j]*255))/(32768*2));
+				image[i][j] = png::rgb_pixel((pic[1][i][j]*255)/32768,
+											((pic[0][i][j]*255)+3*(pic[1][i][j]*255))/(32768*4),
+											((pic[0][i][j]*255)+(pic[1][i][j]*255))/(32768*2));
 			}
 		image.write(colorpicname);
-		sprintf(colorpicname, "./img/%s:cloud.png", MODIS_TYPEQ);
+		sprintf(colorpicname, "./img/test%s%s:cloud.png", MODIS_NAME, MODIS_TYPEQ);
+		int ii = 0, jj = 0, ki = 0, kj = 0;
+		double iinii = heightq/height, jinjj = widthq/width;
 		for (i = 0; i < height; i ++)
 			for (j = 0; j < width; j++)
 			{
-				if ((colorpic[1][i][j]/colorpic[0][i][j] < THRESHOLD250HIGH)&&(colorpic[1][i][j]/colorpic[0][i][j] > THRESHOLD250LOW))
-				{
-					if (colorpic[1][i][j] > WATER250THRESHOLD1)
+					if (colorpic[INFRAREDBAND][i][j] > HIGHT_CLOUD_THRESHOLD)
 					{
-						image[i][j] = png::rgb_pixel(255, 0, 255);
+						for (int ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < heightq); ki++)
+						{
+							for (int kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < widthq); kj++)
+							{
+
+								image[ki][kj] = png::rgb_pixel(100,255,100);
+							}
+						}
 					}
-					else
-					{
-						image[i][j] = png::rgb_pixel(60, 60, 255);
-					}
-				}
+
+
 			}
+
+		for (i = 0; i < heightq; i ++)
+			for (j = 0; j < widthq; j++)
+				if ((pic[1][i][j]/pic[0][i][j] < THRESHOLD250HIGH)&&(pic[1][i][j]/pic[0][i][j] > THRESHOLD250LOW))
+					{
+						if (pic[1][i][j] > WATER250THRESHOLD1)
+						{
+							image[i][j] = png::rgb_pixel(255, 0, 255);
+						}
+						else
+						{
+							image[i][j] = png::rgb_pixel(60, 60, 255);
+						}
+					}
 		image.write(colorpicname);
 
 	printf("done\n");
