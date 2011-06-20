@@ -86,7 +86,7 @@ bool readarray(int32 sds_id, unsigned short **dest, int32 *rank, int32 *dimsizes
 	return true;
 }
 
-bool readradiance(char *modisname, unsigned short ****radiance1, unsigned short ****radianceh, unsigned short ****radianceq, unsigned short ****radiance2,
+bool readradiance(char *path, char *modisname, unsigned short ****radiance1, unsigned short ****radianceh, unsigned short ****radianceq, unsigned short ****radiance2,
 					float32 **offsets, float32 **scales,
 					int *height, int *width, ofstream &log)
 {
@@ -111,7 +111,7 @@ bool readradiance(char *modisname, unsigned short ****radiance1, unsigned short 
 	status = 0;
 	attrstatus = 0;
 	sds_index = 0;
-	sprintf(modisfilepath, "%s%s%s%s", MODIS_DIR, MODIS_TYPE1, modisname, MODIS_EXT);
+	sprintf(modisfilepath, "%s%s%s%s", path, MODIS_TYPE1, modisname, MODIS_EXT);
 	while (status == 0)
 	{
 		sd_id = SDstart (modisfilepath, DFACC_READ);
@@ -186,6 +186,7 @@ bool readradiance(char *modisname, unsigned short ****radiance1, unsigned short 
 
 					log << "emissive array " << height[3] << "x" << width[3] << endl;
 					*radiance2 = (unsigned short ***)malloc(sizeof(unsigned short **)*16);
+					printf("width %d, height%d\n", width[3], height[3]);
 					for (depth = 0; depth < 16; depth++)
 					{
 						radiance2[0][depth] = (unsigned short **)malloc(height[3]*sizeof(unsigned short *));
@@ -238,7 +239,7 @@ bool readradiance(char *modisname, unsigned short ****radiance1, unsigned short 
 
 	status = 0;
 	sds_index = 0;
-	sprintf(modisfilepath, "%s%s%s%s", MODIS_DIR, MODIS_TYPEH, modisname, MODIS_EXT);
+	sprintf(modisfilepath, "%s%s%s%s", path, MODIS_TYPEH, modisname, MODIS_EXT);
 	while (status == 0)
 		{
 			sd_id = SDstart (modisfilepath, DFACC_READ);
@@ -269,6 +270,40 @@ bool readradiance(char *modisname, unsigned short ****radiance1, unsigned short 
 						}
 						readarray(sds_id, radianceh[0][depth], rank, dimsizes, datatype, numattr, log, depth);
 					}
+
+					//attr
+
+					attr_index = 0;
+					attrstatus = 0;
+					while (attrstatus == 0)
+					{
+						attrstatus = SDattrinfo(sds_id, attr_index, attrname, nt, count );
+						log << attrname << endl;
+						if (strcmp(attrname, "radiance_offsets") == 0)
+						{
+							SDreadattr(sds_id, attr_index, (VOIDP)(*offsets + STARTH));
+							log << ".5KM radiance_offsets: ";
+							for (i = 0; i < *count; i++)
+							{
+								log << offsets[0][STARTH+i] << ", ";
+							}
+							log << endl;
+						}
+						else
+							if (strcmp(attrname, "radiance_scales") == 0)
+							{
+								SDreadattr(sds_id, attr_index, (VOIDP)(*scales + STARTH));
+								log << ".5KM radiance_scales: ";
+								for (i = 0; i < *count; i++)
+								{
+									log << scales[0][STARTH+i] << ", ";
+								}
+								log << endl;
+							}
+							attr_index++;
+					}
+
+					//attr
 				}
 			}
 			sds_index++;
@@ -276,7 +311,7 @@ bool readradiance(char *modisname, unsigned short ****radiance1, unsigned short 
 
 	status = 0;
 	sds_index = 0;
-	sprintf(modisfilepath, "%s%s%s%s", MODIS_DIR, MODIS_TYPEQ, modisname, MODIS_EXT);
+	sprintf(modisfilepath, "%s%s%s%s", path, MODIS_TYPEQ, modisname, MODIS_EXT);
 	while (status == 0)
 	{
 		sd_id = SDstart (modisfilepath, DFACC_READ);
@@ -307,7 +342,40 @@ bool readradiance(char *modisname, unsigned short ****radiance1, unsigned short 
 					}
 					readarray(sds_id, radianceq[0][depth], rank, dimsizes, datatype, numattr, log, depth);
 				}
+				//attr
+				attr_index = 0;
+				attrstatus = 0;
+				while (attrstatus == 0)
+				{
+					attrstatus = SDattrinfo(sds_id, attr_index, attrname, nt, count );
+					log << attrname << endl;
+					if (strcmp(attrname, "radiance_offsets") == 0)
+					{
+						SDreadattr(sds_id, attr_index, (VOIDP)(*offsets));
+						log << "QKM radiance_offsets: ";
+						for (i = 0; i < *count; i++)
+						{
+							log << offsets[0][i] << ", ";
+						}
+						log << endl;
+					}
+					else
+						if (strcmp(attrname, "radiance_scales") == 0)
+						{
+							SDreadattr(sds_id, attr_index, (VOIDP)(*scales));
+							log << "QKM radiance_scales: ";
+							for (i = 0; i < *count; i++)
+							{
+								log << scales[0][START2+i] << ", ";
+							}
+							log << endl;
+						}
+						attr_index++;
+					}
+				//attr
 			}
+
+
 		}
 		sds_index++;
 	}

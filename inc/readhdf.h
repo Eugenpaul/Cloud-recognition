@@ -16,7 +16,7 @@
 #define SDSNAMEMAXSIZE 64
 #define SDSATTRNAMEMAXSIZE 64
 //#define MAX_VAR_DIMS 32
-#define MODIS_DIR "modisdata/russia05.07.10/"
+//#define MODIS_DIR "modisdata/russia05.07.10/"
 #define MODIS_TYPE1	"MOD021KM"
 #define MODIS_TYPEH "MOD02HKM"
 #define MODIS_TYPEQ	"MOD02QKM"
@@ -30,7 +30,7 @@
 using namespace std;
 
 bool readarray(int32 sds_id, unsigned short **dest, int32 *rank, int32 *dimsizes, int32 *datatype, int32 *numattr, ofstream &log, int depth);
-bool readradiance(char *modisname, unsigned short ****radiance1, unsigned short ****radianceh, unsigned short ****radianceq,
+bool readradiance(char *path, char *modisname, unsigned short ****radiance1, unsigned short ****radianceh, unsigned short ****radianceq,
 					unsigned short ****radiance2, float32 **offsets, float32 **scales, int *height, int *width, ofstream &log);
 
 #endif /* READHDF_H_ */
