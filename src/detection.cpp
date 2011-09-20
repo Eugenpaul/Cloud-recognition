@@ -17,17 +17,17 @@ void cirrustest(int *height, int *width, short unsigned int **radiance, float th
 	int widthq = width[0];
 	int height1 = height[2];
 	int width1 = width[2];
-	double iinii = widthq/(double)width1;
-	double jinjj = heightq/(double)height1;
-	printf("check offset:%f, scale:%f\n", offset, scale);
-		for (i = 0; i < width1; i++)
-			for (j = 0; j < height1; j++)
+	
+	double jinjj = widthq/(double)width1;
+	double iinii = heightq/(double)height1;
+		for (i = 0; i < height1; i++)
+			for (j = 0; j < width1; j++)
 			{
 				if ((radiance[i][j] - offset)*scale > threshold)
 				{
-					for (ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < widthq); ki++)
+					for (ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < heightq); ki++)
 					{
-						for (kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < heightq); kj++)
+						for (kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < widthq); kj++)
 						{
 							cloudmask[ki][kj] = true;
 						}
@@ -67,23 +67,25 @@ void simplebttest(int *height, int *width, float **brightness, float threshold, 
 	int widthq = width[0];
 	int height2 = height[3];
 	int width2 = width[3];
-	double iinii = widthq/(double)width2;
-	double jinjj = heightq/(double)height2;
-		for (i = 0; i < width2; i++)
-			for (j = 0; j < height2; j++)
+	double jinjj = widthq/(double)width2;
+	double iinii = heightq/(double)height2;
+		for (i = 0; i < height2; i++)
+		{
+			for (j = 0; j < width2; j++)
 			{
 				if (brightness[i][j] < threshold)
 				{
 					if (brightness[i][j] > 0.0)
-					for (ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < widthq); ki++)
+					for (ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < heightq); ki++)
 					{
-						for (kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < heightq); kj++)
+						for (kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < widthq); kj++)
 						{
 							cloudmask[ki][kj] = true;
 						}
 					}
 				}
 			}
+		}
 }
 
 void differencetest(int *height, int *width, float **brightness11, float **brightness12, float **brightness8, bool **cloudmask)
@@ -95,10 +97,10 @@ void differencetest(int *height, int *width, float **brightness11, float **brigh
 	int widthq = width[0];
 	int height2 = height[3];
 	int width2 = width[3];
-	double iinii = widthq/(double)width2;
-	double jinjj = heightq/(double)height2;
-	for (i = 0; i < width2; i ++)
-		for (j = 0; j < height2; j++)
+	double jinjj = widthq/(double)width2;
+	double iinii = heightq/(double)height2;
+	for (i = 0; i < height2; i ++)
+		for (j = 0; j < width2; j++)
 		{
 			t11m12 = brightness11[i][j] - brightness12[i][j];
 			t8m11 = brightness8[i][j] - brightness11[i][j];
@@ -113,9 +115,9 @@ void differencetest(int *height, int *width, float **brightness11, float **brigh
 			}
 			if ((k != -1) && (t8m11 > lookupt8m11[k] - 0.5) && (t8m11 < lookupt8m11[k] + 0.5))
 			{
-				for (int ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < widthq); ki++)
+				for (int ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < heightq); ki++)
 				{
-					for (int kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < heightq); kj++)
+					for (int kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < widthq); kj++)
 					{
 						cloudmask[ki][kj] = true;
 					}
@@ -133,17 +135,17 @@ void differencetest19(int *height, int *width, float **brightness11, float **bri
 	int widthq = width[0];
 	int height2 = height[3];
 	int width2 = width[3];
-	double iinii = widthq/(double)width2;
-	double jinjj = heightq/(double)height2;
-	for (i = 0; i < width2; i ++)
-		for (j = 0; j < height2; j++)
+	double jinjj = widthq/(double)width2;
+	double iinii = heightq/(double)height2;
+	for (i = 0; i < height2; i ++)
+		for (j = 0; j < width2; j++)
 		{
 			t11m39 = brightness11[i][j] - brightness39[i][j];
 			if (t11m39 < threshold)
 			{
-				for (int ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < widthq); ki++)
+				for (int ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < heightq); ki++)
 				{
-					for (int kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < heightq); kj++)
+					for (int kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < widthq); kj++)
 					{
 						cloudmask[ki][kj] = true;
 					}
@@ -159,10 +161,10 @@ void nearbydifferencetest(int *height, int *width, float **brightness, float thr
 	int widthq = width[0];
 	int height2 = height[3];
 	int width2 = width[3];
-	double iinii = widthq/(double)width2;
-	double jinjj = heightq/(double)height2;
-		for (i = 1; i < height2 - 1; i ++)//width
-			for (j = 1; j < height2 - 1; j++)
+	double jinjj = widthq/(double)width2;
+	double iinii = heightq/(double)height2;
+		for (i = 1; i < height2; i ++)//width
+			for (j = 1; j < width2 - 1; j++)
 			{
 				if 	((abs(brightness[i][j] - brightness[i-1][j]) > threshold)||
 					(abs(brightness[i][j] - brightness[i+1][j]) > threshold)||
@@ -170,9 +172,9 @@ void nearbydifferencetest(int *height, int *width, float **brightness, float thr
 					(abs(brightness[i][j] - brightness[i][j - 1]) > threshold))
 				{
 					if (brightness[i][j] > 0.0)
-					for (ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < widthq); ki++)
+					for (ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < heightq); ki++)
 					{
-						for (kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < heightq); kj++)
+						for (kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < widthq); kj++)
 						{
 							cloudmask[ki][kj] = true;
 						}
@@ -189,17 +191,17 @@ void nightdifferencetest17(int *height, int *width, float **brightness37, float 
 	int widthq = width[0];
 	int height2 = height[3];
 	int width2 = width[3];
-	double iinii = widthq/(double)width2;
-	double jinjj = heightq/(double)height2;
-	for (i = 0; i < width2; i ++)
-		for (j = 0; j < height2; j++)
+	double jinjj = widthq/(double)width2;
+	double iinii = heightq/(double)height2;
+	for (i = 0; i < height2; i ++)
+		for (j = 0; j < width2; j++)
 		{
 			t37m12 = brightness37[i][j] - brightness12[i][j];
 			if (t37m12 < threshold)
 			{
-				for (int ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < widthq); ki++)
+				for (int ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < heightq); ki++)
 				{
-					for (int kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < heightq); kj++)
+					for (int kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < widthq); kj++)
 					{
 						cloudmask[ki][kj] = true;
 					}
@@ -216,19 +218,19 @@ void nightdifferencetest23(int *height, int *width, float **brightness73, float 
 	int widthq = width[0];
 	int height2 = height[3];
 	int width2 = width[3];
-	double iinii = widthq/(double)width2;
-	double jinjj = heightq/(double)height2;
-	for (i = 0; i < width2; i ++)
-		for (j = 0; j < height2; j++)
+	double jinjj = widthq/(double)width2;
+	double iinii = heightq/(double)height2;
+	for (i = 0; i < height2; i ++)
+		for (j = 0; j < width2; j++)
 		{
 			t73m11 = brightness73[i][j] - brightness11[i][j];
 			if (t73m11 < threshold)
 			{
-				for (int ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < widthq); ki++)
+				for (int ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < heightq); ki++)
 				{
-					for (int kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < heightq); kj++)
+					for (int kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < widthq); kj++)
 					{
-						cloudmask[ki][kj] = true;
+						cloudmask[kj][ki] = true;
 					}
 				}
 			}
@@ -243,17 +245,17 @@ void wintertest(int *height, int *width, float **brightness11, float **brightnes
 	int widthq = width[0];
 	int height2 = height[3];
 	int width2 = width[3];
-	double iinii = widthq/(double)width2;
-	double jinjj = heightq/(double)height2;
-	for (i = 0; i < width2; i ++)
-		for (j = 0; j < height2; j++)
+	double jinjj = widthq/(double)width2;
+	double iinii = heightq/(double)height2;
+	for (i = 0; i < height2; i ++)
+		for (j = 0; j < width2; j++)
 		{
 			t11m67 = brightness11[i][j] - brightness67[i][j];
 			if (t11m67 < threshold)
 			{
-				for (int ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < widthq); ki++)
+				for (int ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < heightq); ki++)
 				{
-					for (int kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < heightq); kj++)
+					for (int kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < widthq); kj++)
 					{
 						cloudmask[ki][kj] = true;
 					}
@@ -262,70 +264,28 @@ void wintertest(int *height, int *width, float **brightness11, float **brightnes
 		}
 }
 
+void visiblereflectancetest(int *height, int *width, int **reflectance66, int **reflectance87, float threshold66, float threshold87, float32 *scales, float32 *offsets, bool **cloudmask)
+{
+	int i, j;
+	int heightq = height[0];
+	int widthq = width[0];
+	for (i = 0; i < heightq; i++)
+	      for (j = 0; j < widthq; j++)
+	      {
+		  
+	      }
+}
+
+void shadowtest()
+{
+  
+}
+
 bool detect(unsigned short ***radiance1, unsigned short ***radianceh, unsigned short ***radianceq, unsigned short ***radiance2,
 			float ***brightness1, float ***brightnessh, float ***brightnessq, float ***brightness2,
 			int *height, int *width, float32 *scales, float32 *offsets, ofstream &log, bool ***cloudmask)
 {
-	//int i, j;
-	//int heightq = height[0];
-	//int widthq = width[0];
-	//float t8m11 = 0, t11m12 = 0;
-	//int heighth = height[1];
-	//int widthh = width[1];
-	//int height1 = height[2];
-	//int width1 = width[2];
-	//int height2 = height[3];
-	//int width2 = width[3];
-	//bool clouddetected = false;
-	/*for (i = 0; i < height1; i ++)
-		for (j = 0; j < width1; j++)
-		{
-
-			clouddetected = false;
-			if (radiance1[INFRAREDBAND][i][j] > INFRARED_THRESHOLD)
-			{
-				clouddetected = true;
-				cloudmask[0][i][j] = true;
-			}
-			if (radiance1[ULTRAVIOLETBAND][i][j] > ULTRAVIOLET_THRESHOLD)
-			{
-				clouddetected = true;
-				cloudmask[0][i][j] = true;
-			}
-		}
-	*/
-	/*double iinii = heightq/(double)height1, jinjj = widthq/(double)width1;
-	for (i = 0; i < height1; i ++)
-		for (j = 0; j < width1; j++)
-		{
-			if (radiance1[INFRAREDBAND][i][j] > HIGHT_CLOUD_THRESHOLD)
-			{
-				for (int ki = ((int)((i)*iinii)); (ki < ((int)((i+1)*iinii)))&&(ki < heightq); ki++)
-				{
-					for (int kj = ((int)((j)*jinjj)); (kj < ((int)((j+1)*jinjj)))&&(kj < widthq); kj++)
-					{
-						cloudmask[0][ki][kj] = true;
-					}
-				}
-			}
-		}*/
-	/*double rr;
-	for (i = 0; i < heightq; i ++)
-		for (j = 0; j < widthq; j++)
-		{
-			rr = ((radianceq[1][i][j] - offsets[1])*scales[1])/((radianceq[0][i][j] - offsets[0])*scales[0]);
-			if ((rr < THRESHOLD250HIGH)&&(rr > THRESHOLD250LOW))
-			{
-				if (radianceq[1][i][j] > WATER250THRESHOLD1)
-				{
-					cloudmask[0][i][j] = true;
-				}
-				else
-				{
-					cloudmask[0][i][j] = false;
-				}
-			}
-		}*/
+	
 	relationtest(height, width, radianceq[1], radianceq[0], THRESHOLD250LOW, THRESHOLD250HIGH, scales, offsets, cloudmask[0]);
 	simplebttest(height, width, brightness2[T11], THRESHOLDT11, cloudmask[1]);
 	//differencetest(height, width, brightness2[T11], brightness2[T12], brightness2[T8], cloudmask[2]);

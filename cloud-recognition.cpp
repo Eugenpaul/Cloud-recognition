@@ -26,11 +26,11 @@
 #define MODIS_NAME	".A2010186.0900.005.2010186193307"
 //".A2010186.0720.005.2010186135820"
 
-#define LOG			"log.txt"
+#define LOG		"log.txt"
 #define CONFIG		"config.txt"
 
 
-#define MASKDEPTH 		20
+#define MASKDEPTH 	20
 
 
 
@@ -63,7 +63,7 @@ bool readconfig(ifstream &conf, char **path, char ***modisnames, int *number)
 
 	conf >> temp;
 	while (strcmp(temp, "") != 0)
-	{
+	{ 
 		if (strcmp(temp, "path")==0)
 		{
 			conf >> *path;
@@ -74,12 +74,13 @@ bool readconfig(ifstream &conf, char **path, char ***modisnames, int *number)
 			conf >> temp;
 			sprintf(modisnames[0][*number], "%s%s", ".", temp);
 			//modisnames[0][*number][0] = '.';
-			printf("%s\n", modisnames[0][*number]);
+			printf("%d%s\n",*number, modisnames[0][*number]);
 			(*number)++;
 		}
 		strcpy(temp, "");
 		conf >> temp;
 	}
+	return true;
 }
 
 int main(int argc, char *argv[])
@@ -107,7 +108,7 @@ int main(int argc, char *argv[])
 	ofstream log;
 	ifstream conf;
 	char temppicname[255] = "";
-
+	char tempmaskname[255] = "";
 
 	log.open(LOG);
 	conf.open(CONFIG);
@@ -118,22 +119,20 @@ int main(int argc, char *argv[])
 
 	for (int k = 0; k < number ; k++)
 	{
-
-		printf("%s\n",modisnames[k]);
+		printf("\nopening %s\n",modisnames[k]);
 		readradiance(path, modisnames[k], &radiance1, &radianceh, &radianceq, &radiance2, &offsets, &scales, height, width, log);
-		log << "heights:" << height[0] << ", " << height[1] << ", " << height[2];
-		log << "width" << width[0] << ", " << width[1] << ", " << width[2];
-		log << endl << "radiance1[00] = " << radiance1[0][0][0] << endl;
-		log.flush();
+		log << "heights: " << height[0] << ", " << height[1] << ", " << height[2] << endl;
+		log << "width: " << width[0] << ", " << width[1] << ", " << width[2] << endl;
 		log << endl << "readradiance done" << endl;
 		log.flush();
-
-		for (int depth = 0; depth < MASKDEPTH; depth++)
-		{
-			log << "one" << endl;
-			log.flush();
-
+		printf("allocating memory\n");
+		bool ***cloudmask = (bool ***)malloc(sizeof(bool **)*MASKDEPTH);
+		for (int depth = 0; depth < MASKDEPTH - 1; depth++)
+		{	
 			cloudmask[depth] = (bool **)malloc(height[0]*sizeof(bool *));
+			printf("depth = %d\n", depth);
+			printf("height = %d\n", height[0]);
+			printf("width = %d\n", width[0]);
 			for (int i = 0; i < height[0]; i++)
 			{
 				cloudmask[depth][i] = (bool *)malloc(width[0]*sizeof(bool));
@@ -141,15 +140,20 @@ int main(int argc, char *argv[])
 		}
 		log << "allocating cloudmask done" << endl;
 		log.flush();
+		printf("converting data\n");
 		getbrightness(radiance1, radianceh, radianceq, radiance2, height, width, &brightness1, &brightnessh, &brightnessq, &brightness2, scales, offsets, log);
 		log << "getbrightness done" << endl;
 		log.flush();
+		printf("detecting\n");
 		detect(radiance1, radianceh, radianceq, radiance2, brightness1, brightnessh, brightnessq, brightness2, height, width, scales, offsets, log, cloudmask);
 		sprintf(temppicname, "./img/MOD02%s.png", modisnames[k]);
-
-		savepicture(temppicname, radiance1, radianceh, radianceq, cloudmask, height, width, offsets, scales, log);
+		sprintf(tempmaskname, "./img/MOD02%s.mask.png", modisnames[k]);
+		printf("saving\n");
+		
+		savepicture(temppicname, tempmaskname, radiance1, radianceh, radianceq, cloudmask, height, width, offsets, scales, log);
+		printf("%s finished", modisnames[k]);
 	}
 	log.close();
-	printf("done\n");
+	printf("\ndone\n");
 	return 0;
 }

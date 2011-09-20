@@ -1,2 +1,3 @@
-path modisdata/russia05.07.10/
-name A2010186.0545.005.2010186132341
+path modisdata/test/
+name A2011242.0430.005.2011242135555
+

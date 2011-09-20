@@ -9,8 +9,9 @@
 
 using namespace std;
 
-bool savepicture(char *filename,  unsigned short ***radiance1, unsigned short ***radianceh, unsigned short ***radianceq, bool ***cloudmask, int *height, int *width, float32 *offsets, float32 *scales, ofstream &log)
+bool savepicture(char *filenamemap, char *filenamemask,  unsigned short ***radiance1, unsigned short ***radianceh, unsigned short ***radianceq, bool ***cloudmask, int *height, int *width, float32 *offsets, float32 *scales, ofstream &log)
 {
+	char modifiedfilename[255];
 	int widthq = width[0];
 	int heightq = height[0];
 	int widthh = width[1];
@@ -19,37 +20,26 @@ bool savepicture(char *filename,  unsigned short ***radiance1, unsigned short **
 	//int height1 = height[2];
 	bool detected = false;
 	int i; int j;
-	log << "allocating image array " << widthq << "x" << heightq << "... ";
-	log.flush();
 	png::image<png::rgb_pixel> image(widthq,heightq);
 	image.resize(widthq, heightq);
-	log << "done\n";
-	log.flush();
-
-
-	/*sprintf(temppath, "./img/%s", TEMP_PATH);
-	if (!exists(temppath))
-	{
-		mkdir(temppath, 0777);
-	}*/
-
+	
 
 	int hi = 0;
 	int hj = 0;
 	int r, g, b;
-	for (i = 0; i < 36; i++)
-	{
-		printf("%f %f\n", offsets[i], scales[i]);
-	}
+	
 	for (i = 0; i < heightq; i++)
 	{
 		hi = int(heighth/(double)heightq*i);
 		for (j = 0 ; j < widthq; j++)
 		{
 			hj = int(widthh/(double)widthq*j);
+			
+			
 			r = ((radianceq[0][i][j] - offsets[0])*scales[0]*255)/(150);
 			g = ((radianceh[1][hi][hj] - offsets[STARTH + 1])*scales[STARTH+1]*255)/(150);
 			b = ((radianceh[0][hi][hj] - offsets[STARTH])*scales[STARTH]*255)/(150);
+			
 			//r = ((radianceq[0][i][j])*255)/16000;
 			//g = ((radianceh[1][hi][hj])*255)/16000;
 			//b = ((radianceh[0][hi][hj])*255)/16000;
@@ -61,22 +51,20 @@ bool savepicture(char *filename,  unsigned short ***radiance1, unsigned short **
 		}
 
 	}
-	image.write(filename);
+	image.write(filenamemap);
 
+	/*bool up, down, left, right;
 	for (i = 1; i < heightq - 1; i++)
 	{
 		for (j = 1; j < widthq - 1; j++)
 		{
 			if ((!cloudmask[0][i][j])&&(!cloudmask[1][i][j])&&(!cloudmask[2][i][j])&&(!cloudmask[4][i][j])&&(!cloudmask[5][i][j])&&(!cloudmask[7][i][j]))
 			{
-				if(
-(cloudmask[0][i+1][j+1])||(cloudmask[0][i+1][j])||(cloudmask[0][i+1][j-1])||(cloudmask[0][i][j+1])||(cloudmask[0][i][j-1])||(cloudmask[0][i-1][j+1])||(cloudmask[0][i-1][j])||(cloudmask[0][i-1][j-1])||
-(cloudmask[1][i+1][j+1])||(cloudmask[1][i+1][j])||(cloudmask[1][i+1][j-1])||(cloudmask[1][i][j+1])||(cloudmask[1][i][j-1])||(cloudmask[1][i-1][j+1])||(cloudmask[1][i-1][j])||(cloudmask[1][i-1][j-1])||
-//(cloudmask[2][i+1][j+1])||(cloudmask[2][i+1][j])||(cloudmask[2][i+1][j-1])||(cloudmask[2][i][j+1])||(cloudmask[2][i][j-1])||(cloudmask[2][i-1][j+1])||(cloudmask[2][i-1][j])||(cloudmask[2][i-1][j-1])||
-(cloudmask[4][i+1][j+1])||(cloudmask[4][i+1][j])||(cloudmask[4][i+1][j-1])||(cloudmask[4][i][j+1])||(cloudmask[4][i][j-1])||(cloudmask[4][i-1][j+1])||(cloudmask[4][i-1][j])||(cloudmask[4][i-1][j-1])||
-//(cloudmask[5][i+1][j+1])||(cloudmask[5][i+1][j])||(cloudmask[5][i+1][j-1])||(cloudmask[5][i][j+1])||(cloudmask[5][i][j-1])||(cloudmask[5][i-1][j+1])||(cloudmask[5][i-1][j])||(cloudmask[5][i-1][j-1])||
-(cloudmask[7][i+1][j+1])||(cloudmask[7][i+1][j])||(cloudmask[7][i+1][j-1])||(cloudmask[7][i][j+1])||(cloudmask[7][i][j-1])||(cloudmask[7][i-1][j+1])||(cloudmask[7][i-1][j])||(cloudmask[7][i-1][j-1])
-				)
+				up = cloudmask[0][i-1][j]||cloudmask[1][i-1][j]||cloudmask[2][i-1][j]||cloudmask[3][i-1][j]||cloudmask[4][i-1][j]||cloudmask[5][i-1][j]||cloudmask[6][i-1][j]||cloudmask[7][i-1][j];
+				down = cloudmask[0][i+1][j]||cloudmask[1][i+1][j]||cloudmask[2][i+1][j]||cloudmask[3][i+1][j]||cloudmask[4][i+1][j]||cloudmask[5][i+1][j]||cloudmask[6][i+1][j]||cloudmask[7][i+1][j];
+				left = cloudmask[0][i][j-1]||cloudmask[1][i][j-1]||cloudmask[2][i][j-1]||cloudmask[3][i][j-1]||cloudmask[4][i][j-1]||cloudmask[5][i][j-1]||cloudmask[6][i][j-1]||cloudmask[7][i][j-1];
+				right = cloudmask[0][i][j+1]||cloudmask[1][i][j+1]||cloudmask[2][i][j+1]||cloudmask[3][i][j+1]||cloudmask[4][i][j+1]||cloudmask[5][i][j+1]||cloudmask[6][i][j+1]||cloudmask[7][i][j+1];
+				if(up||down||left||right)
 				{
 					r = 250;
 					g = 0;
@@ -86,9 +74,9 @@ bool savepicture(char *filename,  unsigned short ***radiance1, unsigned short **
 			}
 		}
 	}
-	sprintf(filename, "%s%s", filename, "borders.png");
-	image.write(filename);
-
+	sprintf(modifiedfilename, "%s%s", filename, "borders.png");
+	image.write(modifiedfilename);
+*/
 	r = 55;
 	g = 55;
 	b = 55;
@@ -158,11 +146,15 @@ bool savepicture(char *filename,  unsigned short ***radiance1, unsigned short **
 			{
 				image[i][j] = png::rgb_pixel(r, g, b);
 			}
+			else
+			{
+			  image[i][j] = png::rgb_pixel(0, 0, 0);
+			}
 
 		}
 	}
-	sprintf(filename, "%s%s", filename, "mask.png");
-	image.write(filename);
-
+	//sprintf(modifiedfilename, "%s%s", filename, "mask.png");
+	image.write(filenamemask);
+	
 	return true;
 }

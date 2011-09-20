@@ -22,6 +22,6 @@
 
 using namespace std;
 
-bool savepicture(char *filename,  unsigned short ***radiance1, unsigned short ***radianceh, unsigned short ***radianceq, bool ***cloudmask, int *height, int *width,float32 *offsets, float32 *scales, ofstream &log);
+bool savepicture(char *filenamemap, char *filenamemask,  unsigned short ***radiance1, unsigned short ***radianceh, unsigned short ***radianceq, bool ***cloudmask, int *height, int *width,float32 *offsets, float32 *scales, ofstream &log);
 
 #endif /* PIC_H_ */

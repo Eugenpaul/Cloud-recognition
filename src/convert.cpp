@@ -41,6 +41,7 @@ void getbrightness(unsigned short ***radiance1, unsigned short ***radianceh, uns
 			brightnessq[0][depth][i] = (float *)malloc(widthq*sizeof(float));
 		}
 	}
+	log << "brightnessq array height: " << heightq << " width: " << widthq << endl;
 	*brightnessh = (float ***)malloc(sizeof(float **)*5);
 	for (depth = 0; depth < 5; depth++)
 	{
@@ -50,6 +51,7 @@ void getbrightness(unsigned short ***radiance1, unsigned short ***radianceh, uns
 			brightnessh[0][depth][i] = (float *)malloc(widthh*sizeof(float));
 		}
 	}
+	log << "brightnessh array height: " << heighth << " width: " << widthh << endl;
 	*brightness1 = (float ***)malloc(sizeof(float **)*15);
 	for (depth = 0; depth < 15; depth++)
 	{
@@ -59,7 +61,8 @@ void getbrightness(unsigned short ***radiance1, unsigned short ***radianceh, uns
 			brightness1[0][depth][i] = (float *)malloc(width1*sizeof(float));
 		}
 	}
-	printf("malloc\n");
+	log << "brightness1 array height: " << height1 << " width: " << width1 << endl;
+	
 	*brightness2 = (float ***)malloc(sizeof(float **)*16);
 	for (depth = 0; depth < 16; depth++)
 	{
@@ -68,27 +71,20 @@ void getbrightness(unsigned short ***radiance1, unsigned short ***radianceh, uns
 		for (i = 0; i < height2; i++)//width2
 		{
 			//brightness2[0][depth][i] = (float *)malloc(height2*sizeof(float));
-			brightness2[0][depth][i] = (float *)calloc(height2*sizeof(float), 1);
+			brightness2[0][depth][i] = (float *)calloc(width2, sizeof(float));
 		}
 	}
-
-
-	printf("for brightness2\n");
+	log << "brightness2 array height: " << height2 << " width: " << width2 << endl;
 
 	for(depth = 0; depth < 16; depth ++)
 	{
 		wavelength = wavelengths[wt[START2 + depth]];
-		printf("width %d, height %d\n", width2, height2 );
-		for (i = 0; i < width2; i++)
+		
+		for (i = 0; i < height2; i++)
 		{
-			for (j = 0; j < height2; j++)
+			for (j = 0; j < width2; j++)
 			{
 				brightness2[0][depth][i][j] = radiancetobrightness(radiance2[depth][i][j], wavelength, scales[START2 + depth], offsets[START2 + depth]);
-				//if (wt[depth + 22] == 32)
-				if (brightness2[0][depth][i][j] <= 0.1)
-				{
-					printf("%d ", radiance2[depth][i][j]);
-				}
 			}
 			/*if (wt[depth + 22] == 32)
 			{
@@ -97,14 +93,13 @@ void getbrightness(unsigned short ***radiance1, unsigned short ***radianceh, uns
 			}*/
 		}
 	}
-	printf("DDDONE\n");
-
+	
 	for(depth = 0; depth < 15; depth++)
 	{
 		wavelength = wavelengths[wt[START1 + depth]]; // _+ wavetable
-		for (i = 0; i < width1; i++)
+		for (i = 0; i < height1; i++)
 		{
-			for (j = 0; j < height1; j++)
+			for (j = 0; j < width1; j++)
 			{
 				brightness1[0][depth][i][j] = radiancetobrightness(radiance1[depth][i][j], wavelength, scales[START1 + depth], offsets[START1 + depth]);
 			}
@@ -114,9 +109,9 @@ void getbrightness(unsigned short ***radiance1, unsigned short ***radianceh, uns
 	for(depth = 0; depth < 5; depth++)
 	{
 		wavelength = wavelengths[wt[STARTH + depth]];
-		for (i = 0; i < widthh; i++)
+		for (i = 0; i < heighth; i++)
 		{
-			for (j = 0; j < heighth; j++)
+			for (j = 0; j < widthh; j++)
 			{
 				brightnessh[0][depth][i][j] = radiancetobrightness(radianceh[depth][i][j], wavelength, scales[STARTH + depth], offsets[STARTH + depth]);
 			}
@@ -125,9 +120,9 @@ void getbrightness(unsigned short ***radiance1, unsigned short ***radianceh, uns
 	for(depth = 0; depth < 2; depth++)
 	{
 		wavelength = wavelengths[wt[depth]];
-		for (i = 0; i < widthq; i++)
+		for (i = 0; i < heightq; i++)
 		{
-			for (j = 0; j < heightq; j++)
+			for (j = 0; j < widthq; j++)
 			{
 				brightnessq[0][depth][i][j] = radiancetobrightness(radianceq[depth][i][j], wavelength, scales[depth], offsets[depth]);
 			}

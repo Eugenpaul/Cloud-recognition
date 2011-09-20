@@ -11,7 +11,7 @@
 #include <fstream>
 #include <stdlib.h>
 #include "hdf/mfhdf.h"
-
+ 
 //#define INFRARED_THRESHOLD 430
 //#define ULTRAVIOLET_THRESHOLD 60000
 //#define HIGHT_CLOUD_THRESHOLD 630	//430
@@ -34,12 +34,12 @@
 #define T39 (23-22)
 #define T67 (28-22)
 
-#define THRESHOLD250LOW 0.85
+#define THRESHOLD250LOW 0.95
 #define THRESHOLD250HIGH 1.05
 #define WATER250THRESHOLD1 10000
-#define CIRRUSTHRESHOLD 0.35
+#define CIRRUSTHRESHOLD 0.90
 
-#define THRESHOLDT11 277
+#define THRESHOLDT11 277 
 
 
 
