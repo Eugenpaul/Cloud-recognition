@@ -10,8 +10,11 @@
 
 #include <fstream>
 #include <stdlib.h>
+#include <cmath>
 #include "hdf/mfhdf.h"
- 
+#include "convert.h"
+#include "structures.h"
+
 //#define INFRARED_THRESHOLD 430
 //#define ULTRAVIOLET_THRESHOLD 60000
 //#define HIGHT_CLOUD_THRESHOLD 630	//430
@@ -39,7 +42,7 @@
 #define WATER250THRESHOLD1 10000
 #define CIRRUSTHRESHOLD 0.90
 
-#define THRESHOLDT11 277 
+#define THRESHOLDT11 277
 
 
 
@@ -48,8 +51,6 @@ using namespace std;
 
 
 
-bool detect(unsigned short ***radiance1, unsigned short ***radianceh, unsigned short ***radianceq, unsigned short ***radiance2,
-			float ***brightness1, float ***brightnessh, float ***brightnessq, float ***brightness2,
-			int *height, int *width, float32 *scales, float32 *offsets, ofstream &log, bool ***cloudmask);
+bool detect(arrays *a, ProgressViewer *progress, int progresspart);
 
 #endif /* DETECTION_H_ */

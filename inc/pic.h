@@ -14,6 +14,7 @@
 #include <iostream>
 #include <png++/png.hpp>
 #include "hdf/mfhdf.h"
+#include "structures.h"
 
 
 #define STARTH		2
@@ -22,6 +23,6 @@
 
 using namespace std;
 
-bool savepicture(char *filenamemap, char *filenamemask,  unsigned short ***radiance1, unsigned short ***radianceh, unsigned short ***radianceq, bool ***cloudmask, int *height, int *width,float32 *offsets, float32 *scales, ofstream &log);
+bool savepicture(char *filenamemap, char *filenamemask, arrays *a, ProgressViewer *progress, int progresspart);
 
 #endif /* PIC_H_ */

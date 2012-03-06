@@ -40,7 +40,47 @@ bool readarray(int32 sds_id, unsigned short **dest, int32 *rank, int32 *dimsizes
     {
       dest[i][j] = temp[i*width + j];
     }
-   
+
+  }
+    free(temp);
+  return true;
+}
+
+bool readarray32(int32 sds_id, float32 **dest, int32 *rank, int32 *dimsizes, int32 *datatype, int32 *numattr, int depth)
+{
+  int32 *start, *edges, *stride;
+  intn status;
+  int height = 0, width = 0;
+  start = (int32 *)calloc(sizeof(int32)*rank[0], 1);
+  edges = (int32 *)calloc(sizeof(int32)*rank[0], 1);
+  stride = (int32 *)calloc(sizeof(int32)*rank[0], 1);
+  height = dimsizes[rank[0] - 2];
+  width = dimsizes[rank[0] - 1];
+  float32 *temp = (float32 *)malloc(width*height*sizeof(float32));
+  int i = 0, j = 0;
+  for (i = 0; i < *rank; i++)
+  {
+    start[i] = depth;
+    edges[i] = 1;
+    stride[i] = 1;
+  }
+  start[*rank - 1] = 0;
+  start[*rank - 2] = 0;
+  edges[*rank - 1] = width;
+  edges[*rank - 2] = height;
+  status = SDreaddata(sds_id, start, stride, edges, (VOIDP)temp);
+  if (status == FAIL)
+  {
+    free(temp);
+    return false;
+  }
+  for (i = 0; i < height; i++)
+  {
+    for (j = 0; j < width; j++)
+    {
+      dest[i][j] = temp[i*width + j];
+    }
+
   }
     free(temp);
   return true;
@@ -69,7 +109,7 @@ bool complexreadarray(int32 sds_id, unsigned short **dest, int32 *rank, int32 *d
   {
     while (hpos < height)
     {
-      
+
       for (i = 0; i < X_LENGTH; i++)
 	for (j = 0; j < Y_LENGTH; j++)
 	  temp[j][i] = 0;
@@ -78,25 +118,17 @@ bool complexreadarray(int32 sds_id, unsigned short **dest, int32 *rank, int32 *d
       edges[*rank - 1] = X_LENGTH;
       if ((edges[*rank - 1] + wpos) > width)
       {
-	
+
 	edges[*rank - 1] = width - wpos;
       }
       edges[*rank - 2] = Y_LENGTH;
       if ((edges[*rank - 2] + hpos) > height)
       {
-	
+
 	edges[*rank - 2] = height - hpos;
       }
-      
-      
-      /*for (i = 0; i < *rank; i++)
-       *		{
-       *			log << "start" << i << ": " << start[i] << endl;
-       *			log << "edges" << i << ": " << edges[i] << endl;
-       *			log << "stride" << i << ": " << stride[i] << endl;
-       }
-       log.flush();
-       */
+
+
       status = SDreaddata(sds_id, start, stride, edges, (VOIDP)temp);
       if (status == FAIL)
       {
@@ -111,11 +143,11 @@ bool complexreadarray(int32 sds_id, unsigned short **dest, int32 *rank, int32 *d
 	for (j = 0; j < edges[*rank - 2]; j++)
 	{
 	  //dest[hpos + i][wpos + j] = temp[(i + j*edges[*rank-1])/X_LENGTH][(i + j*edges[*rank-1])%X_LENGTH];
-	
+
 	  dest[hpos + i][wpos + j] = temp[i][j];
 	}
 	hpos += Y_LENGTH;
-      
+
       //log << "done\n";
 	//log.flush();
     }
@@ -127,7 +159,7 @@ bool complexreadarray(int32 sds_id, unsigned short **dest, int32 *rank, int32 *d
 
 bool readradiance(char *path, char *modisname, unsigned short ****radiance1, unsigned short ****radianceh, unsigned short ****radianceq, unsigned short ****radiance2,
 		  float32 **offsets, float32 **scales,
-		  int *height, int *width, ofstream &log)
+		  int *height, int *width)
 {
   int32 sd_id, sds_id, sds_index, attr_index;
   intn status, attrstatus;
@@ -140,13 +172,13 @@ bool readradiance(char *path, char *modisname, unsigned short ****radiance1, uns
   int32 *dimsizes = new int32[MAX_VAR_DIMS];
   int32 *datatype = new int32();
   int32 *numattr = new int32();
-  
+
   int32 *nt = new int32();
   int32 *count = new int32();
-  
+
   *offsets = (float32*)malloc(sizeof(float32)*38);
   *scales = (float32*)malloc(sizeof(float32)*38);
-  
+
   status = 0;
   attrstatus = 0;
   sds_index = 0;
@@ -158,20 +190,10 @@ bool readradiance(char *path, char *modisname, unsigned short ****radiance1, uns
     status = SDgetinfo(sds_id, sdsname, rank, dimsizes, datatype, numattr);
     if (status == 0)
     {
-      log << endl << "=> reading id" << sds_index << "(status :" << status << "): '"<< sdsname <<"', rank "<< *rank <<", datatype " << *datatype << ";\ndimsizes:";
-      for (i = 0; i < *rank; i++)
-      {
-	log << dimsizes[i] << ", ";
-      }
-      log << endl;
-      
-      
-      
       if (strcmp(sdsname, "EV_1KM_RefSB") == 0)
       {
 	height[2] = dimsizes[rank[0] - 2];
 	width[2] = dimsizes[rank[0] -1];
-	log << "ref1 array height: " << height[2] << " width: " << width[2] << endl;
 	*radiance1 = (unsigned short ***)malloc(sizeof(unsigned short **)*15);
 	for (depth = 0; depth < 15; depth++)
 	{
@@ -182,50 +204,36 @@ bool readradiance(char *path, char *modisname, unsigned short ****radiance1, uns
 	  }
 	  readarray(sds_id, radiance1[0][depth], rank, dimsizes, datatype, numattr, depth);
 	}
-	
+
 	//############# attr
-	
+
 	attr_index = 0;
 	while (attrstatus == 0)
 	{
 	  attrstatus = SDattrinfo(sds_id, attr_index, attrname, nt, count );
-	  log << attrname << endl;
 	  if (strcmp(attrname, "radiance_offsets") == 0)
 	  {
 	    SDreadattr(sds_id, attr_index, (VOIDP)(*offsets + START1));
-	    log << "1KM radiance_offsets: ";
-	    for (i = 0; i < *count; i++)
-	    {
-	      log << offsets[0][START1+i] << ", ";
-	    }
-	    log << endl;
 	  }
 	  else
 	    if (strcmp(attrname, "radiance_scales") == 0)
 	    {
 	      SDreadattr(sds_id, attr_index, (VOIDP)(*scales + START1));
-	      log << "1KM radiance_scales: ";
-	      for (i = 0; i < *count; i++)
-	      {
-		log << scales[0][START1+i] << ", ";
-	      }
-	      log << endl;
 	    }
 	    attr_index++;
 	}
-	
+
 	//############ attr end
-	
+
       }
       else
 	if (strcmp(sdsname, "EV_1KM_Emissive") == 0)
 	{
 	  height[3] = dimsizes[rank[0] - 2];
 	  width[3] = dimsizes[rank[0] - 1];
-	  
-	  log << "emissive array height: " << height[3] << " width: " << width[3] << endl;
+
 	  *radiance2 = (unsigned short ***)malloc(sizeof(unsigned short **)*16);
-	  
+
 	  for (depth = 0; depth < 16; depth++)
 	  {
 	    radiance2[0][depth] = (unsigned short **)malloc(height[3]*sizeof(unsigned short *));
@@ -235,47 +243,35 @@ bool readradiance(char *path, char *modisname, unsigned short ****radiance1, uns
 	    }
 	    readarray(sds_id, radiance2[0][depth], rank, dimsizes, datatype, numattr, depth);
 	  }
-	  
+
 	  //############# attr
-	  
+
 	  attr_index = 0;
 	  attrstatus = 0;
 	  while (attrstatus == 0)
 	  {
 	    attrstatus = SDattrinfo(sds_id, attr_index, attrname, nt, count );
-	    log << attrname << endl;
+
 	    if (strcmp(attrname, "radiance_offsets") == 0)
 	    {
 	      SDreadattr(sds_id, attr_index, (VOIDP)(*offsets + START2));
-	      log << "emissve 1KM radiance_offsets: ";
-	      for (i = 0; i < *count; i++)
-	      {
-		log << offsets[0][START2+i] << ", ";
-	      }
-	      log << endl;
 	    }
 	    else
 	      if (strcmp(attrname, "radiance_scales") == 0)
 	      {
 		SDreadattr(sds_id, attr_index, (VOIDP)(*scales + START2));
-		log << "emissive 1KM radiance_scales: ";
-		for (i = 0; i < *count; i++)
-		{
-		  log << scales[0][START2+i] << ", ";
-		}
-		log << endl;
 	      }
 	      attr_index++;
 	  }
-	  
+
 	  //############ attr end
-	  
+
 	}
     }
     sds_index++;
   }
-  
-  
+
+
   status = 0;
   sds_index = 0;
   sprintf(modisfilepath, "%s%s%s%s", path, MODIS_TYPEH, modisname, MODIS_EXT);
@@ -286,11 +282,6 @@ bool readradiance(char *path, char *modisname, unsigned short ****radiance1, uns
     status = SDgetinfo(sds_id, sdsname, rank, dimsizes, datatype, numattr);
     if (status == 0)
     {
-      for (i = 0; i < *rank; i++)
-      {
-	log << dimsizes[i] << ", ";
-      }
-      log << endl;
       //SDattrinfo(sds_id,  )
 	      if (strcmp(sdsname, "EV_500_RefSB") == 0)
 	      {
@@ -298,7 +289,6 @@ bool readradiance(char *path, char *modisname, unsigned short ****radiance1, uns
 		widthh = dimsizes[rank[0] -1];
 		width[1] = widthh;
 		height[1] = heighth;
-		log << "refh array height:" << height[1] << "width :" << width[1] << endl;
 		*radianceh = (unsigned short ***)malloc(sizeof(unsigned short **)*5);
 		for (depth = 0; depth < 5; depth++)
 		{
@@ -309,45 +299,32 @@ bool readradiance(char *path, char *modisname, unsigned short ****radiance1, uns
 		  }
 		  readarray(sds_id, radianceh[0][depth], rank, dimsizes, datatype, numattr, depth);
 		}
-		
+
 		//attr
-		
+
 		attr_index = 0;
 		attrstatus = 0;
 		while (attrstatus == 0)
 		{
 		  attrstatus = SDattrinfo(sds_id, attr_index, attrname, nt, count );
-		  log << attrname << endl;
 		  if (strcmp(attrname, "radiance_offsets") == 0)
 		  {
 		    SDreadattr(sds_id, attr_index, (VOIDP)(*offsets + STARTH));
-		    log << ".5KM radiance_offsets: ";
-		    for (i = 0; i < *count; i++)
-		    {
-		      log << offsets[0][STARTH+i] << ", ";
-		    }
-		    log << endl;
 		  }
 		  else
 		    if (strcmp(attrname, "radiance_scales") == 0)
 		    {
 		      SDreadattr(sds_id, attr_index, (VOIDP)(*scales + STARTH));
-		      log << ".5KM radiance_scales: ";
-		      for (i = 0; i < *count; i++)
-		      {
-			log << scales[0][STARTH+i] << ", ";
-		      }
-		      log << endl;
 		    }
 		    attr_index++;
 		}
-		
+
 		//attr
 	      }
     }
     sds_index++;
   }
-  
+
   status = 0;
   sds_index = 0;
   sprintf(modisfilepath, "%s%s%s%s", path, MODIS_TYPEQ, modisname, MODIS_EXT);
@@ -358,11 +335,6 @@ bool readradiance(char *path, char *modisname, unsigned short ****radiance1, uns
     status = SDgetinfo(sds_id, sdsname, rank, dimsizes, datatype, numattr);
     if (status == 0)
     {
-      for (i = 0; i < *rank; i++)
-      {
-	log << dimsizes[i] << ", ";
-      }
-      log << endl;
       //SDattrinfo(sds_id,  )
 		      if (strcmp(sdsname, "EV_250_RefSB") == 0)
 		      {
@@ -370,7 +342,6 @@ bool readradiance(char *path, char *modisname, unsigned short ****radiance1, uns
 			widthq = dimsizes[rank[0] -1];
 			width[0] = widthq;
 			height[0] = heightq;
-			log << "refq array height: " << height[0] << " width:" << width[0] << endl;
 			*radianceq = (unsigned short ***)malloc(sizeof(unsigned short **)*2);
 			for (depth = 0; depth < 2; depth++)
 			{
@@ -387,49 +358,37 @@ bool readradiance(char *path, char *modisname, unsigned short ****radiance1, uns
 			while (attrstatus == 0)
 			{
 			  attrstatus = SDattrinfo(sds_id, attr_index, attrname, nt, count );
-			  log << attrname << endl;
 			  if (strcmp(attrname, "radiance_offsets") == 0)
 			  {
 			    SDreadattr(sds_id, attr_index, (VOIDP)(*offsets));
-			    log << "QKM radiance_offsets: ";
-			    for (i = 0; i < *count; i++)
-			    {
-			      log << offsets[0][i] << ", ";
-			    }
-			    log << endl;
 			  }
 			  else
 			    if (strcmp(attrname, "radiance_scales") == 0)
 			    {
 			      SDreadattr(sds_id, attr_index, (VOIDP)(*scales));
-			      log << "QKM radiance_scales: ";
-			      for (i = 0; i < *count; i++)
-			      {
-				log << scales[0][START2+i] << ", ";
-			      }
-			      log << endl;
 			    }
 			    attr_index++;
 			}
 			//attr
 		      }
-		      
-		      
     }
     sds_index++;
   }
-  
+
   status = SDendaccess (sds_id);
   status = SDend (sd_id);
-  
+
   return true;
 }
 
-bool readradiance(char *path1, char *pathh, char *pathq, unsigned short ****radiance1, unsigned short ****radianceh, unsigned short ****radianceq, 						unsigned short ****radiance2, float32 **offsets, float32 **scales, int *height, int *width, ofstream &log)
+bool readradiance(char *path1, char *pathh, char *pathq, arrays *a, ProgressViewer *progress, int progresspart)
 {
   int32 sd_id, sds_id, sds_index, attr_index;
   intn status, attrstatus;
-  int depth, heightq, widthq, heighth, widthh, height1, width1, height2, width2;
+
+  int depth;
+  int progress_steps_number = 8;
+  int progress_bit = progresspart/progress_steps_number;
   int i;
   char modisfilepath[255] = "";
   char sdsname[SDSNAMEMAXSIZE] = "";
@@ -438,17 +397,27 @@ bool readradiance(char *path1, char *pathh, char *pathq, unsigned short ****radi
   int32 *dimsizes = new int32[MAX_VAR_DIMS];
   int32 *datatype = new int32();
   int32 *numattr = new int32();
-  
+
   int32 *nt = new int32();
   int32 *count = new int32();
-  
-  *offsets = (float32*)malloc(sizeof(float32)*38);
-  *scales = (float32*)malloc(sizeof(float32)*38);
-  
+
+  //38
+  a->offsets1 = (float32*)malloc(sizeof(float32)*15);
+  a->scales1 = (float32*)malloc(sizeof(float32)*15);
+
+  a->offsets2 = (float32*)malloc(sizeof(float32)*16);
+  a->scales2 = (float32*)malloc(sizeof(float32)*16);
+
+  a->offsetsh = (float32*)malloc(sizeof(float32)*5);
+  a->scalesh = (float32*)malloc(sizeof(float32)*5);
+
+  a->offsetsq = (float32*)malloc(sizeof(float32)*2);
+  a->scalesq = (float32*)malloc(sizeof(float32)*2);
+
   status = 0;
   attrstatus = 0;
   sds_index = 0;
-  
+
   while (status == 0)
   {
     sd_id = SDstart (path1, DFACC_READ);
@@ -456,21 +425,21 @@ bool readradiance(char *path1, char *pathh, char *pathq, unsigned short ****radi
     status = SDgetinfo(sds_id, sdsname, rank, dimsizes, datatype, numattr);
     if (status == 0)
     {
-      
+
       if (strcmp(sdsname, "EV_1KM_RefSB") == 0)
       {
-	
-	height[2] = dimsizes[rank[0] - 2];
-	width[2] = dimsizes[rank[0] -1];
-	*radiance1 = (unsigned short ***)malloc(sizeof(unsigned short **)*15);
+        progress->setValue(progress->Value() + progress_bit);
+	a->height1 = dimsizes[rank[0] - 2];
+	a->width1 = dimsizes[rank[0] -1];
+	a->radiance1 = (unsigned short ***)malloc(sizeof(unsigned short **)*15);
 	for (depth = 0; depth < 15; depth++)
 	{
-	  radiance1[0][depth] = (unsigned short **)malloc(height[2]*sizeof(unsigned short *));
-	  for (i = 0; i < height[2]; i++)
+	  a->radiance1[depth] = (unsigned short **)malloc(a->height1*sizeof(unsigned short *));
+	  for (i = 0; i < a->height1; i++)
 	  {
-	    radiance1[0][depth][i] = (unsigned short *)malloc(width[2]*sizeof(unsigned short));
+	    a->radiance1[depth][i] = (unsigned short *)malloc(a->width1*sizeof(unsigned short));
 	  }
-	  readarray(sds_id, radiance1[0][depth], rank, dimsizes, datatype, numattr, depth);
+	  readarray(sds_id, a->radiance1[depth], rank, dimsizes, datatype, numattr, depth);
 	}
 	attr_index = 0;
 	while (attrstatus == 0)
@@ -478,12 +447,12 @@ bool readradiance(char *path1, char *pathh, char *pathq, unsigned short ****radi
 	  attrstatus = SDattrinfo(sds_id, attr_index, attrname, nt, count );
 	  if (strcmp(attrname, "radiance_offsets") == 0)
 	  {
-	    SDreadattr(sds_id, attr_index, (VOIDP)(*offsets + START1));
+	    SDreadattr(sds_id, attr_index, (VOIDP)(a->offsets1));
 	  }
 	  else
 	    if (strcmp(attrname, "radiance_scales") == 0)
 	    {
-	      SDreadattr(sds_id, attr_index, (VOIDP)(*scales + START1));
+	      SDreadattr(sds_id, attr_index, (VOIDP)(a->scales1));
 	    }
 	    attr_index++;
 	}
@@ -491,22 +460,21 @@ bool readradiance(char *path1, char *pathh, char *pathq, unsigned short ****radi
       else
 	if (strcmp(sdsname, "EV_1KM_Emissive") == 0)
 	{
-	  height[3] = dimsizes[rank[0] - 2];
-	  width[3] = dimsizes[rank[0] - 1];
-	  log << "height[3]width[3]" << height[3] << width[3] << endl;
-	  log.flush();
-	  *radiance2 = (unsigned short ***)malloc(sizeof(unsigned short **)*16);
-	  
+          progress->setValue(progress->Value() + progress_bit);
+	  a->height2 = dimsizes[rank[0] - 2];
+	  a->width2 = dimsizes[rank[0] - 1];
+	  a->radiance2 = (unsigned short ***)malloc(sizeof(unsigned short **)*16);
+
 	  for (depth = 0; depth < 16; depth++)
 	  {
-	    radiance2[0][depth] = (unsigned short **)malloc(height[3]*sizeof(unsigned short *));
-	    for (i = 0; i < height[3]; i++)
+	    a->radiance2[depth] = (unsigned short **)malloc(a->height2*sizeof(unsigned short *));
+	    for (i = 0; i < a->height2; i++)
 	    {
-	      radiance2[0][depth][i] = (unsigned short *)malloc(width[3]*sizeof(unsigned short));
+	      a->radiance2[depth][i] = (unsigned short *)malloc(a->width2*sizeof(unsigned short));
 	    }
-	    readarray(sds_id, radiance2[0][depth], rank, dimsizes, datatype, numattr, depth);
+	    readarray(sds_id, a->radiance2[depth], rank, dimsizes, datatype, numattr, depth);
 	  }
-	  
+
 	  attr_index = 0;
 	  attrstatus = 0;
 	  while (attrstatus == 0)
@@ -514,12 +482,12 @@ bool readradiance(char *path1, char *pathh, char *pathq, unsigned short ****radi
 	    attrstatus = SDattrinfo(sds_id, attr_index, attrname, nt, count );
 	    if (strcmp(attrname, "radiance_offsets") == 0)
 	    {
-	      SDreadattr(sds_id, attr_index, (VOIDP)(*offsets + START2));
+	      SDreadattr(sds_id, attr_index, (VOIDP)(a->offsets2));
 	    }
 	    else
 	      if (strcmp(attrname, "radiance_scales") == 0)
 	      {
-		SDreadattr(sds_id, attr_index, (VOIDP)(*scales + START2));
+		SDreadattr(sds_id, attr_index, (VOIDP)(a->scales2));
 	      }
 	      attr_index++;
 	  }
@@ -527,8 +495,8 @@ bool readradiance(char *path1, char *pathh, char *pathq, unsigned short ****radi
     }
     sds_index++;
   }
-  
-  
+
+
   status = 0;
   sds_index = 0;
   while (status == 0)
@@ -540,21 +508,20 @@ bool readradiance(char *path1, char *pathh, char *pathq, unsigned short ****radi
     {
       if (strcmp(sdsname, "EV_500_RefSB") == 0)
       {
-	heighth = dimsizes[rank[0] - 2];
-	widthh = dimsizes[rank[0] -1];
-	width[1] = widthh;
-	height[1] = heighth;
-	*radianceh = (unsigned short ***)malloc(sizeof(unsigned short **)*5);
+        progress->setValue(progress->Value() + progress_bit);
+	a->heighth = dimsizes[rank[0] - 2];
+	a->widthh = dimsizes[rank[0] -1];
+	a->radianceh = (unsigned short ***)malloc(sizeof(unsigned short **)*5);
 	for (depth = 0; depth < 5; depth++)
 	{
-	  radianceh[0][depth] = (unsigned short **)malloc(heighth*sizeof(unsigned short *));
-	  for (i = 0; i < heighth; i++)
+	  a->radianceh[depth] = (unsigned short **)malloc(a->heighth*sizeof(unsigned short *));
+	  for (i = 0; i < a->heighth; i++)
 	  {
-	    radianceh[0][depth][i] = (unsigned short *)malloc(widthh*sizeof(unsigned short));
+	    a->radianceh[depth][i] = (unsigned short *)malloc(a->widthh*sizeof(unsigned short));
 	  }
-	  readarray(sds_id, radianceh[0][depth], rank, dimsizes, datatype, numattr, depth);
+	  readarray(sds_id, a->radianceh[depth], rank, dimsizes, datatype, numattr, depth);
 	}
-	
+
 	attr_index = 0;
 	attrstatus = 0;
 	while (attrstatus == 0)
@@ -562,14 +529,14 @@ bool readradiance(char *path1, char *pathh, char *pathq, unsigned short ****radi
 	  attrstatus = SDattrinfo(sds_id, attr_index, attrname, nt, count );
 	  if (strcmp(attrname, "radiance_offsets") == 0)
 	  {
-	    SDreadattr(sds_id, attr_index, (VOIDP)(*offsets + STARTH));
-	    
+	    SDreadattr(sds_id, attr_index, (VOIDP)(a->offsetsh));
+
 	  }
 	  else
 	    if (strcmp(attrname, "radiance_scales") == 0)
 	    {
-	      SDreadattr(sds_id, attr_index, (VOIDP)(*scales + STARTH));
-	      
+	      SDreadattr(sds_id, attr_index, (VOIDP)(a->scalesh));
+
 	    }
 	    attr_index++;
 	}
@@ -577,7 +544,7 @@ bool readradiance(char *path1, char *pathh, char *pathq, unsigned short ****radi
     }
     sds_index++;
   }
-  
+
   status = 0;
   sds_index = 0;
   while (status == 0)
@@ -587,21 +554,53 @@ bool readradiance(char *path1, char *pathh, char *pathq, unsigned short ****radi
     status = SDgetinfo(sds_id, sdsname, rank, dimsizes, datatype, numattr);
     if (status == 0)
     {
+      if (strcmp(sdsname, "Latitude") == 0)
+      {
+        progress->setValue(progress->Value() + progress_bit);
+	printf("latitude\n");
+	a->height1 = dimsizes[rank[0] - 2];
+	a->width1 = dimsizes[rank[0] - 1];
+	printf("check a->height1 = %d\n", a->height1);
+	printf("check a->width1 = %d\n", a->width1);
+	a->latitude = (float32 **)malloc(a->height1*sizeof(float32 *));
+	for (i = 0; i < a->height1; i++)
+	{
+	  a->latitude[i] = (float32 *)malloc(a->width1*sizeof(float32));
+	}
+	readarray32(sds_id, a->latitude, rank, dimsizes, datatype, numattr, depth);
+      }
+      else
+      if (strcmp(sdsname, "Longitude") == 0)
+      {
+        progress->setValue(progress->Value() + progress_bit);
+	printf("longitude\n");
+	a->height1 = dimsizes[rank[0] - 2];
+	a->width1 = dimsizes[rank[0] - 1];
+	printf("check a->height1 = %d\n", a->height1);
+	printf("check a->width1 = %d\n", a->width1);
+	a->longitude = (float32 **)malloc(a->height1*sizeof(float32 *));
+	for (i = 0; i < a->height1; i++)
+	{
+	  a->longitude[i] = (float32 *)malloc(a->width1*sizeof(float32));
+	}
+	readarray32(sds_id, a->longitude, rank, dimsizes, datatype, numattr, depth);
+
+      }
+      else
       if (strcmp(sdsname, "EV_250_RefSB") == 0)
       {
-	heightq = dimsizes[rank[0] - 2];
-	widthq = dimsizes[rank[0] -1];
-	width[0] = widthq;
-	height[0] = heightq;
-	*radianceq = (unsigned short ***)malloc(sizeof(unsigned short **)*2);
+        progress->setValue(progress->Value() + progress_bit);
+	a->heightq = dimsizes[rank[0] - 2];
+	a->widthq = dimsizes[rank[0] -1];
+	a->radianceq = (unsigned short ***)malloc(sizeof(unsigned short **)*2);
 	for (depth = 0; depth < 2; depth++)
 	{
-	  radianceq[0][depth] = (unsigned short **)malloc(heightq*sizeof(unsigned short *));
-	  for (i = 0; i < heightq; i++)
+	  a->radianceq[depth] = (unsigned short **)malloc(a->heightq*sizeof(unsigned short *));
+	  for (i = 0; i < a->heightq; i++)
 	  {
-	    radianceq[0][depth][i] = (unsigned short *)malloc(widthq*sizeof(unsigned short));
+	    a->radianceq[depth][i] = (unsigned short *)malloc(a->widthq*sizeof(unsigned short));
 	  }
-	  readarray(sds_id, radianceq[0][depth], rank, dimsizes, datatype, numattr, depth);
+	  readarray(sds_id, a->radianceq[depth], rank, dimsizes, datatype, numattr, depth);
 	}
 	attr_index = 0;
 	attrstatus = 0;
@@ -610,23 +609,59 @@ bool readradiance(char *path1, char *pathh, char *pathq, unsigned short ****radi
 	  attrstatus = SDattrinfo(sds_id, attr_index, attrname, nt, count );
 	  if (strcmp(attrname, "radiance_offsets") == 0)
 	  {
-	    SDreadattr(sds_id, attr_index, (VOIDP)(*offsets));
+	    SDreadattr(sds_id, attr_index, (VOIDP)(a->offsetsq));
 	  }
 	  else
 	    if (strcmp(attrname, "radiance_scales") == 0)
 	    {
-	      SDreadattr(sds_id, attr_index, (VOIDP)(*scales));
+	      SDreadattr(sds_id, attr_index, (VOIDP)(a->scalesq));
 	    }
 	    attr_index++;
 	}
       }
-      
+
     }
     sds_index++;
   }
-  
+
   status = SDendaccess (sds_id);
   status = SDend (sd_id);
-  
+  progress->setValue(progress->Value() + progress_bit);
+  return true;
+}
+
+bool createnames(char *input, char ***output, int *number)
+{
+
+  const char *MODISNAMES[] = {"MOD021KM", "MOD02HKM", "MOD02QKM"};
+  int i = 0;
+  int n = *number;
+  *output = (char **)malloc(sizeof(char *)*n);
+  for (i = 0; i < n; i++)
+  {
+    output[0][i] = (char *)calloc(1, MAXNAMESIZE);
+  }
+  for (i = 0; i < n; i++)
+  {
+    sprintf(output[0][i], "%s%s%s", MODISNAMES[i], input, MODIS_EXT);
+  }
+
+  return true;
+}
+
+bool createpaths(char *path, char **names, char ***output, int *number)
+{
+  int i = 0;
+  int n = *number;
+  *output = (char **)malloc(sizeof(char *)*n);
+  for (i = 0; i < n; i++)
+  {
+    output[0][i] = (char *)calloc(1, MAXNAMESIZE);
+  }
+  for (i = 0; i < n; i++)
+  {
+    sprintf(output[0][i], "%s%s", path, names[i]);
+  }
+
   return true;
 }

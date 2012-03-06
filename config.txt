@@ -1,3 +1,0 @@
-path modisdata/test/
-name A2011242.0430.005.2011242135555
-
