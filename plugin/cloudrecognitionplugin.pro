@@ -1,7 +1,7 @@
 QGIS_DIR = /usr/include/qgis/
 PROJECT_ROOT = ../
 TEMPLATE = lib
-CONFIG = qt
+CONFIG = qt plugin
 QT += xml qt3support
 unix:LIBS += -L/$$QGIS_DIR/lib -lqgis_core -lqgis_gui -lpng
 INCLUDEPATH += $$QGIS_DIR/src/ui $$QGIS_DIR/src/plugins /usr/include/gdal $$QGIS_DIR/src/* $$QGIS_DIR/src/gui $$QGIS_DIR/src/raster $$QGIS_DIR/src/core $$QGIS_DIR/src/core/raster $$QGIS_DIR $$PROJECT_ROOT/inc PROJECT_ROOT/src/*.cpp
