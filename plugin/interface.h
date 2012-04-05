@@ -2,7 +2,6 @@
 #include "detection.h"
 #include "pic.h"
 #include "readhdf.h"
-#include "base.h"
 #include "structures.h"
 #include <QObject>
 #include <QTextStream>

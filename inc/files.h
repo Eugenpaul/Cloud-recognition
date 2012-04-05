@@ -9,6 +9,8 @@
 #include <QDir>
 #include <QTextStream>
 
+#define PATH_LENGTH 255
+
 bool fileExists(QString &path);
 bool directoryExists(QString &path);
 bool createDirectory(QString &path);
