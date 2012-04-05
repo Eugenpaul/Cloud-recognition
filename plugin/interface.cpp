@@ -30,7 +30,7 @@ bool process(char *path1, char *pathh, char *pathq, char *imgpath, int rewrite_i
     a.cloudmask = (char **)malloc(a.heightq*sizeof(char *));
     for (i = 0; i < a.heightq; i++)
     {
-      a.cloudmask[i] = (char *)malloc(a.widthq*sizeof(char));
+        a.cloudmask[i] = (char *)malloc(a.widthq*sizeof(char));
     }
     progress->setValue(45);
     fprintf(stderr, "CHECK progress 45\n");
@@ -41,7 +41,8 @@ bool process(char *path1, char *pathh, char *pathq, char *imgpath, int rewrite_i
     progress->setValue(75);
     fprintf(stderr, "CHECK progress 80\n");
 
-    savepicture(imgpath, imgmaskpath, &a, progress, 15);
+    //savepicture(imgpath, imgmaskpath, &a, progress, 15);
+    createGDALRaster(imgpath, imgmaskpath, &a, progress, 15);
     progress->setValue(90);
     if (a.radianceq)
     {

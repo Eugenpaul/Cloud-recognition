@@ -1,8 +1,16 @@
 #include "qgiscloudrecognitionplugin.h"
 
-QgsCloudRecognitionPlugin::QgsCloudRecognitionPlugin(QgisInterface* iface): mIface(iface), mAction(0)
+static const QString sName = QObject::tr( "Cloud Recognition" );
+static const QString sDescription = QObject::tr( "A plugin that opens mod02.*.hdf files, creates cloud mask, and saves it to tiff" );
+static const QString sCategory = QObject::tr( "Plugins" );
+static const QString sPluginVersion = QObject::tr( "Version 0.2a" );
+static const QgisPlugin::PLUGINTYPE sPluginType = QgisPlugin::RENDERER;
+
+QgsCloudRecognitionPlugin::QgsCloudRecognitionPlugin(QgisInterface* iface):QgisPlugin( sName, sDescription, /*sCategory,*/ sPluginVersion, sPluginType ), mIface(iface), mAction(0)
 {
+  mDataFile = QDir().homePath() + "/.qgis/cloudrecognitionplugindata"; //TODO use settings
 }
+
 QgsCloudRecognitionPlugin::~QgsCloudRecognitionPlugin()
 {
 }
@@ -10,16 +18,6 @@ QgsCloudRecognitionPlugin::~QgsCloudRecognitionPlugin()
 void QgsCloudRecognitionPlugin::initGui()
 {
   mAction = new QAction(tr("&CR plugin"), this);
-  hdfedit = new QListWidget();
-  imgedit = new QLineEdit();
-  hdfbase = new QListWidget();
-  searchedit = new QLineEdit();
-  progressbar = new QProgressBar();
-  progressbar->setMinimum(0);
-  progressbar->setMaximum(100);
-  progressbar->setTextVisible(false);
-
-  hdfedit->setSortingEnabled(true);
   connect(mAction, SIGNAL(activated()), this, SLOT(MainWindow()));
   mIface->addToolBarIcon(mAction);
   mIface->addPluginToMenu(tr("&CR plugin"), mAction);
@@ -28,11 +26,9 @@ void QgsCloudRecognitionPlugin::initGui()
 void QgsCloudRecognitionPlugin::unload()
 {
   mIface->removeToolBarIcon(mAction);
-  mIface->removePluginMenu(tr("&Convert to point"), mAction);
+  mIface->removePluginMenu(tr("&CR plugin"), mAction);
   delete mAction;
 }
-
-
 
 void QgsCloudRecognitionPlugin::MainWindow()
 {
@@ -41,22 +37,17 @@ void QgsCloudRecognitionPlugin::MainWindow()
 
 void QgsCloudRecognitionPlugin::rewriteQuestion(QWidget *w, char *type, char *name, char *path, bool *rewrite)
 {
-    //QMessageBox::StandardButton reply;
     int reply;
     char question[2048];
     sprintf(question, "File of type %s for %s already exists:\n \'%s\'\n Do you want to create a new one in the folder specified and replace it the database", type, name, path);
     QMessageBox msgBox;
 
     msgBox.addButton(QMessageBox::Yes);
-
     msgBox.addButton(QMessageBox::No);
-
     msgBox.setText(question);
 
     reply = msgBox.exec();
-    /*reply = QMessageBox::question(w, tr("QMessageBox::question()"),
-                                    tr(question),
-                                    QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);*/
+
     if (reply == QMessageBox::Yes)
     {
         *rewrite = true;
@@ -70,17 +61,18 @@ void QgsCloudRecognitionPlugin::rewriteQuestion(QWidget *w, char *type, char *na
 
 void QgsCloudRecognitionPlugin::Process()
 {
-    QString qdestination_dir = imgedit->text();
+    QString qdestination_dir = mMainWidget->destinationDirLineEdit->text();
     char *destination_dir = NULL;
     QMessageBox msgBox;
     char msgText[MAX_MESSAGE_LENGTH];
     ProgressViewer *progress = new ProgressViewer();
     QObject::connect(progress, SIGNAL(valueChanged(int)),
-                     progressbar, SLOT(setValue(int)));
+                     mMainWidget->progressBar, SLOT(setValue(int)));
     char *path1 = NULL, *pathh = NULL, *pathq = NULL, *img = NULL, *imgmask = NULL;
     int i;
     char *name = NULL;
-    if (imgedit->text() == "")
+
+    if (mMainWidget->destinationDirLineEdit->text() == "")
     {
         sprintf(msgText, "Destination folder is not specified\n");
         msgBox.setText(msgText);
@@ -97,7 +89,7 @@ void QgsCloudRecognitionPlugin::Process()
         fprintf(stderr, "Error: cannot convert QString to char*\n");
         return;
     }
-
+  /*
     if (!file_or_directory_exists(destination_dir))
     {
         if (!force_create_directory(destination_dir))
@@ -108,19 +100,28 @@ void QgsCloudRecognitionPlugin::Process()
             fprintf(stderr, "Error: cannot create folder \"%s\"\n", destination_dir);
             return;
         }
-    }
-    if (hdfedit->count() != 0)
+    }*/
+
+  if (!directoryExists(qdestination_dir))
+  {
+    if (!createDirectory(qdestination_dir))
     {
-        for (i = 0; i < hdfedit->count(); i++)
-        {
-            //QString item_text("<FONT COLOR=blue>" + hdfedit->item(i)->text() + "</FONT>");
-            hdfedit->item(i)->setText(hdfedit->item(i)->text());
-            if (name)
-            {
-                free(name);
-                name = NULL;
-            }
-            if (!qstring_to_string(hdfedit->item(i)->text(), &name, hdfedit->item(i)->text().size()))
+      //ERROR
+      return;
+    }
+  }
+  if (mMainWidget->selectedDataListWidget->count() != 0)
+  {
+    for (i = 0; i < mMainWidget->selectedDataListWidget->count(); i++)
+    {
+      //QString item_text("<FONT COLOR=blue>" + mMainWidget->selectedDataListWidget->item(i)->text() + "</FONT>");
+      mMainWidget->selectedDataListWidget->item(i)->setText(mMainWidget->selectedDataListWidget->item(i)->text());
+      if (name)
+      {
+        free(name);
+        name = NULL;
+      }
+            if (!qstring_to_string(mMainWidget->selectedDataListWidget->item(i)->text(), &name, mMainWidget->selectedDataListWidget->item(i)->text().size()))
             {
                 sprintf(msgText, "Error: cannot convert QString to char *\n");
                 msgBox.setText(msgText);
@@ -128,8 +129,20 @@ void QgsCloudRecognitionPlugin::Process()
                 fprintf(stderr, "Error: cannot conver QString to char *\n");
                 return;
             }
+            QString qname, qpath1, qpathh, qpathq, qimg, qimgmask;
+            qname = mMainWidget->selectedDataListWidget->item(i)->text();
+            if (!getPathsByName(qname, qpath1, qpathh, qpathq, qimg, qimgmask, mDataFile))
+            {
+              //ERROR
+              return;
+            }
 
-            if (selectpaths(name, &path1, &pathh, &pathq, &img, &imgmask))
+            if (qpath1.isEmpty() || qpathh.isEmpty() || qpathq.isEmpty())
+            {
+              fprintf(stderr, "CHECK ERROR: files not found\n");
+              return;
+            }
+            /*if (selectpaths(name, &path1, &pathh, &pathq, &img, &imgmask))
             {
 
                 sprintf(msgText, "Some files are not in the database:\n"
@@ -141,9 +154,37 @@ void QgsCloudRecognitionPlugin::Process()
                 msgBox.setText(msgText);
                 msgBox.exec();
                 fprintf(stderr, "Error: some files are not in the database\n");
-            }
+            }*/
             else
             {
+                  if (!qstring_to_string(qpath1, &path1, qpath1.size())
+                    || !qstring_to_string(qpathh, &pathh, qpathh.size())
+                    || !qstring_to_string(qpathq, &pathq, qpathq.size())
+                    || !qstring_to_string(qimg, &img, qimg.size())
+                    || !qstring_to_string(qimgmask, &imgmask, qimgmask.size()))
+                  {
+                      sprintf(msgText, "Error: cannot convert QString to char *\n");
+                      msgBox.setText(msgText);
+                      msgBox.exec();
+                      fprintf(stderr, "Error: cannot conver QString to char *\n");
+                      return;
+                  }
+                  if (qimg.isEmpty())
+                  {
+                    if (img)
+                    {
+                      free(img);
+                    }
+                    img = NULL;
+                  }
+                  if (qimgmask.isEmpty())
+                  {
+                    if (imgmask)
+                    {
+                      free(imgmask);
+                    }
+                    imgmask = NULL;
+                  }
                   int destination_dir_length = strlen(destination_dir);
                   bool add_slash = false;
                   bool rewrite = false;
@@ -152,9 +193,9 @@ void QgsCloudRecognitionPlugin::Process()
                       add_slash = true;
                   }
 
-                      if (img != NULL)
+                      if (!qimg.isEmpty())
                       {
-                          if (!file_or_directory_exists(img))
+                          if (!fileExists(qimg))
                           {
                               free(img);
                               img = NULL;
@@ -185,7 +226,7 @@ void QgsCloudRecognitionPlugin::Process()
                               strcat(img, "/");
                           }
                           strcat(img, name);
-                          strcat(img, ".surface.png");
+                          strcat(img, ".surface.tiff");
                           strcat(img, "\0");
                           fprintf(stderr, "CHECK img: %s\n", img);
                       }
@@ -197,7 +238,7 @@ void QgsCloudRecognitionPlugin::Process()
 
                       if (imgmask != NULL)
                       {
-                          if (!file_or_directory_exists(imgmask))
+                          if (!fileExists(qimgmask))
                           {
                               free(imgmask);
                               imgmask = NULL;
@@ -228,7 +269,7 @@ void QgsCloudRecognitionPlugin::Process()
                               strcat(imgmask, "/");
                           }
                           strcat(imgmask, name);
-                          strcat(imgmask, ".mask.png");
+                          strcat(imgmask, ".mask.tiff");
                           strcat(imgmask, "\0");
                           fprintf(stderr, "CHECK imgmask: %s\n", imgmask);
                       }
@@ -249,14 +290,16 @@ void QgsCloudRecognitionPlugin::Process()
                   }
                   else
                   {
-                      if (addfiletodatabase(img))
+                      qimg = QString(img);
+                      if (!addFile(qimg, mDataFile))
                       {
                           sprintf(msgText, "Error: cannot add file to the database:\n\'%s\'\n", img);
                           msgBox.setText(msgText);
                           msgBox.exec();
                           fprintf(stderr, "Error: cannot add file to database:\n\'%s\'\n", img);
                       }
-                      if (addfiletodatabase(imgmask))
+                      qimgmask = QString(imgmask);
+                      if (!addFile(qimgmask, mDataFile))
                       {
                           sprintf(msgText, "Error: cannot add file to the database:\n\'%s\'\n", imgmask);
                           msgBox.setText(msgText);
@@ -298,30 +341,31 @@ void QgsCloudRecognitionPlugin::Process()
     msgBox.exec();
     progress->setValue(0);
     return;
+
 }
 
 void QgsCloudRecognitionPlugin::addGroupName()
 {
-    int i = 0;
-    bool same_found = false;
-    if (hdfbase->count())
+  int i = 0;
+  bool same_found = false;
+  if (mMainWidget->searchResultsListWidget->count())
+  {
+    if (mMainWidget->searchResultsListWidget->currentItem())
     {
-        if (hdfbase->currentItem())
+      for (i = 0; i < mMainWidget->selectedDataListWidget->count(); i++)
+      {
+        if (mMainWidget->selectedDataListWidget->item(i)->text() == mMainWidget->searchResultsListWidget->currentItem()->text())
         {
-            for (i = 0; i < hdfedit->count(); i++)
-            {
-                if (hdfedit->item(i)->text() == hdfbase->currentItem()->text())
-                {
-                    same_found = true;
-                }
-            }
-            if (!same_found)
-            {
-                hdfedit->addItem(hdfbase->currentItem()->text());
-            }
+          same_found = true;
         }
+      }
+      if (!same_found)
+      {
+        mMainWidget->selectedDataListWidget->addItem(mMainWidget->searchResultsListWidget->currentItem()->text());
+      }
     }
-    return;
+  }
+  return;
 }
 
 void QgsCloudRecognitionPlugin::addAll()
@@ -329,41 +373,42 @@ void QgsCloudRecognitionPlugin::addAll()
     int i = 0;
     int j = 0;
     bool same_found = false;
-    for (i = 0; i < hdfbase->count(); i++)
+    for (i = 0; i < mMainWidget->searchResultsListWidget->count(); i++)
     {
-        for (j = 0; j < hdfedit->count(); j++)
+        for (j = 0; j < mMainWidget->selectedDataListWidget->count(); j++)
         {
-            if (hdfedit->item(j)->text() == hdfbase->item(i)->text())
+            if (mMainWidget->selectedDataListWidget->item(j)->text() == mMainWidget->searchResultsListWidget->item(i)->text())
             {
                 same_found = true;
             }
         }
         if (!same_found)
         {
-            hdfedit->addItem(hdfbase->item(i)->text());
+            mMainWidget->selectedDataListWidget->addItem(mMainWidget->searchResultsListWidget->item(i)->text());
         }
     }
     return;
 }
 
-void QgsCloudRecognitionPlugin::saveimage()
+void QgsCloudRecognitionPlugin::browseDestination()
 {
-    QFileDialog *dialog = new QFileDialog();
-    dialog->setFileMode(QFileDialog::Directory);
-    dialog->setOption(QFileDialog::ShowDirsOnly, true);
-    QMessageBox msgBox;
-    char msgText[MAX_MESSAGE_LENGTH];
-    char *pathstring;
-    int i;
-    if (dialog->exec())
-    {
-        imgedit->setText(dialog->selectedFile());
-    }
-    return;
+  QFileDialog *dialog = new QFileDialog();
+  dialog->setFileMode(QFileDialog::Directory);
+  dialog->setOption(QFileDialog::ShowDirsOnly, true);
+  QMessageBox msgBox;
+  char msgText[MAX_MESSAGE_LENGTH];
+  char *pathstring;
+  int i;
+  if (dialog->exec())
+  {
+    mMainWidget->destinationDirLineEdit->setText(dialog->selectedFile());
+  }
+  return;
 }
 
 void QgsCloudRecognitionPlugin::createDB()
 {
+#if 0
     QMessageBox msgBox;
     char msgText[MAX_MESSAGE_LENGTH];
     char *root_user;
@@ -402,6 +447,7 @@ void QgsCloudRecognitionPlugin::createDB()
         msgBox.setText(msgText);
         msgBox.exec();
     }
+#endif
     return;
 }
 
@@ -411,7 +457,7 @@ void QgsCloudRecognitionPlugin::openImages(QListWidgetItem *item)
     char msgText[MAX_MESSAGE_LENGTH];
     char *name;
     char *path1, *pathh, *pathq, *img, *imgmask;
-    if (!mysql_is_available())
+    /*if (!mysql_is_available())
     {
         sprintf(msgText, "MySQL is not available\nPlease, check that you have installed mysql-client and mysql-server");
         msgBox.setText(msgText);
@@ -434,9 +480,19 @@ void QgsCloudRecognitionPlugin::openImages(QListWidgetItem *item)
         msgBox.exec();
         fprintf(stderr, "Error: cannot conver QString to char *\n");
         return;
+    }*/
+    QString qpath1, qpathh, qpathq, qimg, qimgmask;
+    QString qname = item->text();
+    if (!getPathsByName(qname, qpath1, qpathh, qpathq, qimg, qimgmask, mDataFile))
+    {
+        return;
     }
-
-    if (selectpaths(name, &path1, &pathh, &pathq, &img, &imgmask))
+    if (qpath1.isEmpty() || qpathh.isEmpty() || qpathq.isEmpty())
+    {
+        fprintf(stderr, "CHECK ERROR: path not found\n");
+        //return;
+    }
+    /*if (selectpaths(name, &path1, &pathh, &pathq, &img, &imgmask))
     {
 
         sprintf(msgText, "Some files are not in the database:\n"
@@ -448,8 +504,23 @@ void QgsCloudRecognitionPlugin::openImages(QListWidgetItem *item)
         msgBox.setText(msgText);
         msgBox.exec();
         fprintf(stderr, "Error: some files are not in the database\n");
+    }*/
+    if (qimg.isEmpty() || qimgmask.isEmpty())
+    {
+        fprintf(stderr, "CHECK ERROR: img not found\n");
+        return;
     }
-    if ((img != NULL) && (imgmask != NULL))
+
+    if (fileExists(qimg) && fileExists(qimgmask))
+    {
+             QFileInfo myFileInfo(qimg);
+             QString myBaseNameQString = myFileInfo.completeBaseName();
+             mIface->addRasterLayer(qimg, myBaseNameQString);
+             QFileInfo myFileInfo2(qimgmask);
+             myBaseNameQString = myFileInfo2.completeBaseName();
+             mIface->addRasterLayer(qimgmask, myBaseNameQString);
+    }
+    /*if ((img != NULL) && (imgmask != NULL))
     {
         if (!file_or_directory_exists(img))
         {
@@ -488,149 +559,81 @@ void QgsCloudRecognitionPlugin::openImages(QListWidgetItem *item)
         msgBox.setText(msgText);
         msgBox.exec();
         fprintf(stderr, "Error: some files are not in the database\n");
-    }
+    }*/
+    return;
 }
 
-void QgsCloudRecognitionPlugin::selectfromdb()
+void QgsCloudRecognitionPlugin::searchInData()
 {
-    char *searchstring = NULL;
     QMessageBox msgBox;
-    char msgText[MAX_MESSAGE_LENGTH];
-    char **result = NULL;
     int n = 0;
     int i = 0;
     QString string;
-    if (!mysql_is_available())
+    if (!fileExists(mDataFile))
     {
-        sprintf(msgText, "MySQL is not available\nPlease, check that you have installed mysql-client and mysql-server");
-        msgBox.setText(msgText);
-        msgBox.exec();
-        fprintf(stderr, "Error: cannot connect to mysql\n");
-        return;
-    }
-    if (!modis_database_table_exists())
-    {
-        sprintf(msgText, "Database or modis_user doesn't exist\nPlease, go to \"DB config...\" and create them");
-        msgBox.setText(msgText);
-        msgBox.exec();
-        fprintf(stderr, "Error: modis_database or modis_user doesn't exist\n");
-        return;
-    }
-    if (!qstring_to_string(searchedit->text(), &searchstring, searchedit->text().size()))
-    {
-        sprintf(msgText, "Error: cannot convert QString to char*\n");
-        msgBox.setText(msgText);
-        msgBox.exec();
-        fprintf(stderr, "Error: cannot convert QString to char*\n");
-        return;
+      return;
     }
 
-    fprintf(stderr, "CHECK searchstring: \"%s\"\n", searchstring);
-    if(selectfrombase(searchstring, &result, &n))
+    QStringList result = QStringList();
+    QString searchString = mMainWidget->searchLineEdit->text();
+    if (!searchRequest(searchString, result, mDataFile))
     {
         return;
     }
     else
     {
-        printf("check before clear\n");
-        hdfbase->clear();
-        printf("check after clear, n = %d\n", n);
-        for (i = 0; i < n; i++)
+      mMainWidget->searchResultsListWidget->clear();
+      if (!result.isEmpty())
+      {
+        for (i = 0; i < result.size(); i++)
         {
-            printf("check result: %s\n", result[i]);
-
-            //string = QString(QLatin1String(result[i]));
-            hdfbase->addItem(QLatin1String(result[i]));
+            mMainWidget->searchResultsListWidget->addItem(result.at(i));
         }
-        if (result)
-        {
-            for (i = 0; i < n; i++)
-            {
-                if (result[i])
-                {
-                    fprintf(stderr, "CHECK free: %d\n", i);
-                    free(result[i]);
-                    fprintf(stderr, "CHECK after free %d\n" ,i);
-                }
-            }
-            fprintf(stderr, "CHECK free result\n");
-            free(result);
-            fprintf(stderr, "CHECK after free result\n");
-        }
+      }
     }
     return;
 }
 
-void QgsCloudRecognitionPlugin::addtodatabase()
+void QgsCloudRecognitionPlugin::addFilesToDataList()
 {
-    QFileDialog *dialog = new QFileDialog();
-    dialog->setFileMode(QFileDialog::ExistingFiles);
+    QFileDialog *openDialog = new QFileDialog();
+    openDialog->setFileMode(QFileDialog::ExistingFiles);
     QStringList filters = QStringList();
-    filters << "any suitable files (MOD*.hdf *.surface.png *.mask.png)"
+    filters << "any suitable files (MOD*.hdf *.surface.tiff *.mask.tiff)"
             << "hdf MOD files (MOD*.hdf)"
-            << "result images (*.surface.png *.mask.png)"
+            << "result images (*.surface.tiff *.mask.tiff)"
             << "any files (*)";
-    //dialog->setNameFilter(trUtf8("hdf MOD files (MOD*.hdf), png result files (*.png)"));
-
-    dialog->setNameFilterDetailsVisible(true);
-    dialog->setNameFilters(filters);
-    QStringList file_names;
+    //dialog->setNameFilter(trUtf8("hdf MOD files (MOD*.hdf), .tiff result files (*.tiff)"));
+    openDialog->setNameFilterDetailsVisible(true);
+    openDialog->setNameFilters(filters);
+    QStringList fileNames;
     QMessageBox msgBox;
     char msgText[MAX_MESSAGE_LENGTH];
-    char *pathstring = NULL;
-    int i;
-    if (!mysql_is_available())
+    //char *pathstring = NULL;
+    if (openDialog->exec())
     {
-        sprintf(msgText, "MySQL is not available\nPlease, check that you have installed mysql-client and mysql-server");
-        msgBox.setText(msgText);
-        msgBox.exec();
-        fprintf(stderr, "Error: cannot connect to mysql\n");
-        return;
+        fileNames = openDialog->selectedFiles();
     }
-    if (!modis_database_table_exists())
+    if (!fileNames.isEmpty())
     {
-        sprintf(msgText, "Database or modis_user doesn't exist\nPlease, go to \"DB config...\" and create them");
-        msgBox.setText(msgText);
-        msgBox.exec();
-        fprintf(stderr, "Error: modis_database or modis_user doesn't exist\n");
-        return;
-    }
-    if (dialog->exec())
-    {
-        file_names = dialog->selectedFiles();
-    }
-    if (!file_names.isEmpty())
-    {
-        int successfully_added_num = 0;
-        for (i = 0; i < file_names.size(); i++)
+        int successfullyAddedNum = 0;
+        for (int i = 0; i < fileNames.size(); i++)
         {
-            if (!qstring_to_string(file_names[i], &pathstring, file_names[i].size()))
-            {
-                sprintf(msgText, "Error: cannot convert QString to char*\n");
-                msgBox.setText(msgText);
-                msgBox.exec();
-                fprintf(stderr, "Error: cannot convert QString to char*\n");
-                return;
-            }
-            if (addfiletodatabase(pathstring))
-            {
-                sprintf(msgText, "Error: cannot add file to the database:\n\'%s\'\n", pathstring);
-                msgBox.setText(msgText);
-                msgBox.exec();
-                fprintf(stderr, "Error: cannot add file to database:\n\'%s\'\n", pathstring);
-            }
-            else
-            {
-                successfully_added_num ++;
-            }
-            free(pathstring);
-            pathstring = NULL;
+          if (!addFile(fileNames[i], mDataFile))
+          {
+            msgBox.setText("Error: cannot add file : \n\'" + fileNames[i] + "\'");
+            msgBox.exec();
+          }
+          else
+          {
+            successfullyAddedNum ++;
+          }
         }
-        sprintf(msgText, "%d file%s ha%s been added\n", successfully_added_num,
+        /*sprintf(msgText, "%d file%s ha%s been added\n", successfully_added_num,
                                                         successfully_added_num != 1? "s":"",
                                                         successfully_added_num != 1? "ve":"s"
-               );
-        msgBox.setText(msgText);
+               );*/
+        msgBox.setText(QString("files added: %1 ").arg(successfullyAddedNum));
         msgBox.exec();
     }
     return;
@@ -639,21 +642,22 @@ void QgsCloudRecognitionPlugin::addtodatabase()
 
 void QgsCloudRecognitionPlugin::deletefromlist()
 {
-    if (hdfedit->currentItem())
+    if (mMainWidget->selectedDataListWidget->currentItem())
     {
-        delete hdfedit->currentItem();
+        delete mMainWidget->selectedDataListWidget->currentItem();
     }
     return;
 }
 
 void QgsCloudRecognitionPlugin::clearlist()
 {
-    hdfedit->clear();
+    mMainWidget->selectedDataListWidget->clear();
     return;
 }
 
 void QgsCloudRecognitionPlugin::dbConfigWindow()
 {
+#if 0
     QMessageBox msgBox;
     char msgText[MAX_MESSAGE_LENGTH];
     if (!mysql_is_available())
@@ -721,104 +725,43 @@ void QgsCloudRecognitionPlugin::dbConfigWindow()
 
     QObject::connect(create_button, SIGNAL(clicked()), this, SLOT(createDB()));
     QObject::connect(cancel_button, SIGNAL(clicked()), config_window, SLOT(close()));
-
+#endif
     return;
 }
 
 void QgsCloudRecognitionPlugin::showWindow()
 {
     QWidget *window = new QWidget();
+    mMainWidget = new Ui::QgsCloudRecognitionForm();
+    mMainWidget->setupUi(window);
+//    mMainWidget.progressBar->setTextVisible(false);
+
     window->resize(600, 400);
     QRect rect = QApplication::desktop()->geometry();
     window->move (rect.center() - window->rect().center());
     window->show();
     window->setWindowTitle(QApplication::translate("crplugin", "Cloud recognition"));
     window->activateWindow();
-    QLabel *hdflabel = new QLabel;
-    QLabel *searchresultlabel = new QLabel;
-    QLabel *imglabel = new QLabel;
-    QGridLayout *layout = new QGridLayout;
-    QGridLayout *vertical_layout = new QGridLayout;
 
-    QPushButton *addbutton = new QPushButton;
-    QPushButton *delbutton = new QPushButton;
-    QPushButton *addallbutton = new QPushButton;
-    QPushButton *clearbutton = new QPushButton;
-    QPushButton *setbutton = new QPushButton;
-    QPushButton *procbutton = new QPushButton;
-    QPushButton *cancelbutton = new QPushButton;
-
-    QPushButton *searchbutton = new QPushButton;
-    QPushButton *dbconfig = new QPushButton;
-    QPushButton *addtodb = new QPushButton;
-    QPushButton *add = new QPushButton;
-
-    imgedit->setText(getenv("HOME"));
-
-    searchbutton->setText("Search");
-    addtodb->setText("Add to DB...");
-    dbconfig->setText("DB config...");
-    add->setText("Add");
-
-    addbutton->setText("Add >");
-    delbutton->setText("Del <");
-    addallbutton->setText("Add all >>");
-    clearbutton->setText("Clear <<");
-    setbutton->setText("Browse...");
-    procbutton->setText("Run");
-    hdflabel->setText("Data to process");
-    searchresultlabel->setText("Search result");
-    imglabel->setText("Destination folder:");
-    cancelbutton->setText("Cancel");
-
-    layout->addWidget(searchbutton, 0, 0, 1, 1);
-    layout->addWidget(searchedit, 0, 1, 1, 2);
-    layout->addWidget(addtodb, 0, 3, 1, 1);
-    layout->addWidget(dbconfig, 0, 4, 1, 1);
-
-    layout->addWidget(searchresultlabel, 1, 0, 1, 1);
-    layout->addWidget(hdflabel, 1, 3, 1, 1);
-
-    layout->addWidget(hdfbase, 2, 0, 1, 2);
-    layout->addWidget(hdfedit, 2, 3, 1, 2);
-
-    vertical_layout->addWidget(addbutton, 0, 0);
-    vertical_layout->addWidget(addallbutton, 1, 0);
-    vertical_layout->addWidget(delbutton, 3, 0);
-    vertical_layout->addWidget(clearbutton, 4, 0);
-
-    layout->addLayout(vertical_layout, 2, 2);
-
-
-    layout->addWidget(imglabel, 3, 0, 1, 1);
-    layout->addWidget(imgedit, 3, 1, 1, 3);
-
-    layout->addWidget(setbutton, 3, 4, 1, 1);
-    layout->addWidget(procbutton, 4, 0, 1, 3);
-    layout->addWidget(cancelbutton, 4, 3, 1, 2);
-
-    layout->addWidget(progressbar, 5, 0, 1, 5);
-
-    window->setLayout(layout);
     QString path;
-    QObject::connect(searchbutton, SIGNAL(clicked()), this, SLOT(selectfromdb()));
-    QObject::connect(searchedit, SIGNAL(returnPressed()), searchbutton, SIGNAL(clicked()));
-    QObject::connect(addbutton, SIGNAL(clicked()), this, SLOT(addGroupName()));
-    QObject::connect(addallbutton, SIGNAL(clicked()), this, SLOT(addAll()));
-    QObject::connect(delbutton, SIGNAL(clicked()), this, SLOT(deletefromlist()));
-    QObject::connect(clearbutton, SIGNAL(clicked()), this, SLOT(clearlist()));
+    QObject::connect(mMainWidget->searchButton, SIGNAL(clicked()), this, SLOT(searchInData()));
+    QObject::connect(mMainWidget->searchLineEdit, SIGNAL(returnPressed()), mMainWidget->searchButton, SIGNAL(clicked()));
+    QObject::connect(mMainWidget->addButton, SIGNAL(clicked()), this, SLOT(addGroupName()));
+    QObject::connect(mMainWidget->addAllButton, SIGNAL(clicked()), this, SLOT(addAll()));
+    QObject::connect(mMainWidget->deleteButton, SIGNAL(clicked()), this, SLOT(deletefromlist()));
+    QObject::connect(mMainWidget->clearButton, SIGNAL(clicked()), this, SLOT(clearlist()));
 
-    QObject::connect(addtodb, SIGNAL(clicked()), this, SLOT(addtodatabase()));
-    QObject::connect(dbconfig, SIGNAL(clicked()), this, SLOT(dbConfigWindow()));
+    QObject::connect(mMainWidget->addFilesButton, SIGNAL(clicked()), this, SLOT(addFilesToDataList()));
+    //QObject::connect(dbconfig, SIGNAL(clicked()), this, SLOT(dbConfigWindow()));
 
-    QObject::connect(hdfedit,SIGNAL(itemDoubleClicked(QListWidgetItem*)),
+    QObject::connect(mMainWidget->selectedDataListWidget,SIGNAL(itemDoubleClicked(QListWidgetItem*)),
            this,SLOT(openImages(QListWidgetItem*)));
-    QObject::connect(hdfbase,SIGNAL(itemDoubleClicked(QListWidgetItem*)),
+    QObject::connect(mMainWidget->searchResultsListWidget,SIGNAL(itemDoubleClicked(QListWidgetItem*)),
            this,SLOT(openImages(QListWidgetItem*)));
 
-    QObject::connect(setbutton, SIGNAL(clicked()), this, SLOT(saveimage()));
-    QObject::connect(procbutton, SIGNAL(clicked()), this, SLOT(Process()));
-    QObject::connect(cancelbutton, SIGNAL(clicked()), window, SLOT(close()));
+    QObject::connect(mMainWidget->browseButton, SIGNAL(clicked()), this, SLOT(browseDestination()));
+    QObject::connect(mMainWidget->runButton, SIGNAL(clicked()), this, SLOT(Process()));
+    QObject::connect(mMainWidget->closeButton, SIGNAL(clicked()), window, SLOT(close()));
     return;
 }
 
@@ -828,22 +771,30 @@ QGISEXTERN QgisPlugin* classFactory(QgisInterface* iface)
 {
   return new QgsCloudRecognitionPlugin(iface);
 }
+
 QGISEXTERN QString name()
 {
-  return "Cloud recognition plugin";
+  return sName;
 }
+
 QGISEXTERN QString description()
 {
-  return "A plugin that opens mod02.*.hdf files, creates cloud mask, and saves it to png";
+  return sDescription;
 }
+
 QGISEXTERN QString version()
 {
-  return "0.1a";
+  return sPluginVersion;
+}
+
+QGISEXTERN QString category()
+{
+  return sCategory;
 }
 
 QGISEXTERN int type()
 {
-  return QgisPlugin::UI;
+  return sPluginType;
 }
 
 QGISEXTERN void unload(QgisPlugin* theQgsCloudRecognitionPluginPointer)

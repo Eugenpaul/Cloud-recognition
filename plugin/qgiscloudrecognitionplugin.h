@@ -17,8 +17,10 @@
 #include <QMessageBox>
 #include <QtGui>
 #include "interface.h"
-#include "../inc/base.h"
+//#include "../inc/base.h"
+#include "../inc/files.h"
 #include "../inc/addition.h"
+#include "ui_qgscloudrecognitionbase.h"
 
 #ifdef WIN32
 #define QGISEXTERN extern "C" __declspec( dllexport )
@@ -40,13 +42,14 @@ public slots:
   void MainWindow();
   void addAll();
   void addGroupName();
-  void addtodatabase();
+  void addFilesToDataList();
+  void browseDestination();
   void clearlist();
   void createDB();
   void dbConfigWindow();
   void deletefromlist();
   void saveimage();
-  void selectfromdb();
+  void searchInData();
   void openImages(QListWidgetItem *item);
   void Process();
   void rewriteQuestion(QWidget *w, char *type, char *name, char *path, bool *rewrite);
@@ -54,15 +57,17 @@ private:
   QgisInterface *mIface;
   QAction *mAction;
   QWidget *window;
+  QString mDataFile;
   QString path;
-  QProgressBar *progressbar;
+  /*QProgressBar *progressbar;
   QListWidget *hdfbase;
   QListWidget *hdfedit;
   QLineEdit *imgedit;
-  QLineEdit *searchedit;
+  QLineEdit *searchedit;*/
   QLineEdit *user_edit;
   QLineEdit *password_edit;
   QLabel *db_status;
+  Ui::QgsCloudRecognitionForm *mMainWidget;
   void showWindow();
 };
   #endif

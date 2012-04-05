@@ -30,9 +30,7 @@
 
 
 
-using namespace std;
-
-bool readarray(int32 sds_id, unsigned short **dest, int32 *rank, int32 *dimsizes, int32 *datatype, int32 *numattr, ofstream &log, int depth);
+bool readarray(int32 sds_id, unsigned short **dest, int32 *rank, int32 *dimsizes, int32 *datatype, int32 *numattr, std::ofstream &log, int depth);
 bool readarray32(int32 sds_id, float32 **dest, int32 *rank, int32 *dimsizes, int32 *datatype, int32 *numattr, int depth);
 bool readradiance(char *path, char *modisname, unsigned short ****radiance1, unsigned short ****radianceh, unsigned short ****radianceq,
 					unsigned short ****radiance2, float32 **offsets, float32 **scales, int *height, int *width);

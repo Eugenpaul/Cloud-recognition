@@ -45,12 +45,6 @@
 #define THRESHOLDT11 277
 
 
-
-
-using namespace std;
-
-
-
 bool detect(arrays *a, ProgressViewer *progress, int progresspart);
 
 #endif /* DETECTION_H_ */

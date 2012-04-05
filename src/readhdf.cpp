@@ -6,6 +6,8 @@
  */
 #include "readhdf.h"
 
+using namespace std;
+
 bool readarray(int32 sds_id, unsigned short **dest, int32 *rank, int32 *dimsizes, int32 *datatype, int32 *numattr, int depth)
 {
   int32 *start, *edges, *stride;
