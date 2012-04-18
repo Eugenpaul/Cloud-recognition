@@ -18,8 +18,7 @@
 
 //#include <gdal.h>
 
-#include "cpl_string.h"
-#include <ogr_spatialref.h>
+
 
       //#include <commonutils.h>
 //#include "gdal.h"

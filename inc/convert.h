@@ -38,7 +38,6 @@ const int wt[38] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 13, 14, 14, 15, 
 const int brightness2essential[BRIGHTNESS2NUMBER] = {10, 11, 8, 1};
 const int brightness1essential[BRIGHTNESS1NUMBER] = {14};
 
-
 float radiancetobrightness(int radiance, float wavelength, float32 scale, float32 offset);
 void getbrightness(arrays *a, ProgressViewer *progress, int progresspart);
 

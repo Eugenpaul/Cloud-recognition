@@ -6,9 +6,9 @@
  */
 
 #include "pic.h"
-
-
-#include "gdal_priv.h"
+#include <gdal/cpl_string.h>
+#include <gdal/ogr_spatialref.h>
+#include "gdal/gdal_priv.h"
 /*#include "gdalwarper.h"
       #include "cpl_string.h"
       #include "ogr_spatialref.h"

@@ -15,4 +15,4 @@
 #define CREATE_NEW                      4
 #define CREATE_NEW_AND_DELETE_ORIGINAL  5
 
-bool process(char *path1, char *pathh, char *pathq, char *imgpath, int rewrite_imgpath, char *imgmaskpath, int rewrite_imgmaskpath, ProgressViewer *progress);
+bool process(QString qPathKM, QString qPathH, QString qPathQ, QString qImgPath, QString qImgMaskPath, ProgressViewer *progress);

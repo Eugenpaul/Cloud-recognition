@@ -1,13 +1,7 @@
 #ifndef QGSPOINTCONVERTERPLUGIN_H
 #define QGSPOINTCONVERTERPLUGIN_H
-#include "qgisplugin.h"
-#include "qgsgeometry.h"
-#include "qgsrasterlayer.h"
-#include "qgisinterface.h"
-#include "qgsgeometry.h"
-#include "qgsvectordataprovider.h"
-#include "qgsvectorlayer.h"
-#include <qgsrasterbandstats.h>
+
+
 //#include <qgsrasterpyramid.h>
 #include <QObject>
 #include <QListWidget>
@@ -16,11 +10,8 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QtGui>
-#include "interface.h"
-//#include "../inc/base.h"
-#include "../inc/files.h"
-#include "../inc/addition.h"
-#include "ui_qgscloudrecognitionbase.h"
+#include <QFileInfo>
+
 
 #ifdef WIN32
 #define QGISEXTERN extern "C" __declspec( dllexport )
@@ -28,7 +19,23 @@
 #define QGISEXTERN extern "C"
 #endif
 
-#define MAX_MESSAGE_LENGTH 2048
+#include "qgisplugin.h"
+
+
+
+//#include "qgis.h"
+
+#include "qgsvectorlayer.h"
+#include "qgsvectordataprovider.h"
+#include <qgsrasterbandstats.h>
+#include "qgsgeometry.h"
+//#include "qgsrasterlayer.h"
+#include <qgsapplication.h>
+#include "qgisinterface.h"
+#include "interface.h"
+#include "../inc/files.h"
+#include "ui_qgscloudrecognitionbase.h"
+
 class QgsCloudRecognitionPlugin: public QObject, public QgisPlugin
 {
   Q_OBJECT
@@ -39,35 +46,23 @@ public:
   void unload();
 
 public slots:
-  void MainWindow();
+  void mainWindow();
   void addAll();
   void addGroupName();
   void addFilesToDataList();
   void browseDestination();
-  void clearlist();
-  void createDB();
-  void dbConfigWindow();
+  void clearList();
   void deletefromlist();
   void saveimage();
   void searchInData();
   void openImages(QListWidgetItem *item);
-  void Process();
-  void rewriteQuestion(QWidget *w, char *type, char *name, char *path, bool *rewrite);
+  void processData();
+  void rewriteQuestion(QWidget *w, QString type, QString name, QString path, bool *rewrite);
 private:
   QgisInterface *mIface;
   QAction *mAction;
   QWidget *window;
   QString mDataFile;
-  QString path;
-  /*QProgressBar *progressbar;
-  QListWidget *hdfbase;
-  QListWidget *hdfedit;
-  QLineEdit *imgedit;
-  QLineEdit *searchedit;*/
-  QLineEdit *user_edit;
-  QLineEdit *password_edit;
-  QLabel *db_status;
   Ui::QgsCloudRecognitionForm *mMainWidget;
-  void showWindow();
 };
   #endif
